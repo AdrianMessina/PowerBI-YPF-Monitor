@@ -8,10 +8,9 @@ import sys
 import os
 from pathlib import Path
 
-# Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-# Load .env file if exists (for API keys, admin password, etc.)
+# Load .env
 _env_path = Path(__file__).parent / '.env'
 if _env_path.exists():
     with open(_env_path, 'r') as _f:
@@ -21,14 +20,10 @@ if _env_path.exists():
                 _key, _val = _line.split('=', 1)
                 os.environ.setdefault(_key.strip(), _val.strip())
 
-# Import apps
 from apps import home, powerbi_analyzer, documentation_generator, layout_organizer
-from apps import dax_optimizer, bi_bot, usage_dashboard
-
-# Import shared logger
+from apps import dax_optimizer, usage_dashboard
 from shared.usage_logger import UsageLogger
 
-# Page config
 st.set_page_config(
     page_title="YPF BI Monitor",
     page_icon="📊",
@@ -36,135 +31,171 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Initialize logger in session state
 if 'logger' not in st.session_state:
-    st.session_state.logger = UsageLogger(
-        suite_name="YPF_BI_Monitor",
-        version="1.0"
-    )
-
+    st.session_state.logger = UsageLogger(suite_name="YPF_BI_Monitor", version="1.0")
 logger = st.session_state.logger
 
-# Import shared styles
 from apps_core.layout_core.shared_styles import inject_shared_styles
-
-# Inject shared CSS + global overrides
 inject_shared_styles()
+
+# === CRITICAL CSS: kill dead space + fix sidebar contrast ===
 st.markdown("""
 <style>
-    /* Hide Streamlit menu and footer */
+    /* Hide Streamlit chrome */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+    }
+    /* Kill top padding that Streamlit adds */
+    .stAppViewBlockContainer,
+    [data-testid="stAppViewBlockContainer"] {
+        padding-top: 1rem !important;
+    }
+    .block-container {
+        padding-top: 1rem !important;
+    }
 
-    /* Sidebar styling - YPF dark theme */
+    /* ---- SIDEBAR ---- */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #000000 0%, #111111 50%, #1a1a1a 100%);
+        background: linear-gradient(180deg, #080E1A 0%, #0F172A 50%, #1E293B 100%);
+        border-right: 1px solid rgba(255,255,255,0.06);
+    }
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: 0.5rem;
     }
     [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
-        color: #0451E4;
+        color: #E2E8F0;
     }
+
+    /* Radio nav */
     [data-testid="stSidebar"] .stRadio > label {
-        color: #cccccc !important;
-        font-family: 'Fira Sans', sans-serif !important;
-        font-size: 0.95rem;
-        padding: 0.4rem 0;
+        display: none !important;
     }
     [data-testid="stSidebar"] .stRadio > div {
-        gap: 0.25rem;
+        gap: 2px;
     }
     [data-testid="stSidebar"] .stRadio [data-baseweb="radio"] {
-        background-color: transparent;
+        background: transparent;
         cursor: pointer !important;
+        border-radius: 6px;
+        padding: 0.1rem 0;
+        transition: background 120ms ease-out;
+        position: relative;
     }
     [data-testid="stSidebar"] .stRadio [data-baseweb="radio"]:hover {
-        background-color: rgba(4, 81, 228, 0.1);
-        border-radius: 6px;
+        background: rgba(4,81,228,0.15);
     }
-    h1, h2, h3 {
-        color: #1E293B;
+    /* NAV TEXT: force white on ALL text inside radio items */
+    [data-testid="stSidebar"] .stRadio label,
+    [data-testid="stSidebar"] .stRadio label span,
+    [data-testid="stSidebar"] .stRadio label p,
+    [data-testid="stSidebar"] .stRadio label div,
+    [data-testid="stSidebar"] .stRadio [data-baseweb="radio"] label,
+    [data-testid="stSidebar"] .stRadio [data-baseweb="radio"] label *,
+    [data-testid="stSidebar"] .stRadio [role="radiogroup"] label,
+    [data-testid="stSidebar"] .stRadio [role="radiogroup"] label *,
+    [data-testid="stSidebar"] .stRadio p,
+    [data-testid="stSidebar"] .stRadio span {
+        color: #E2E8F0 !important;
+        font-family: 'Fira Sans', sans-serif !important;
+        font-size: 0.88rem !important;
     }
+    [data-testid="stSidebar"] .stRadio [data-baseweb="radio"]:hover label,
+    [data-testid="stSidebar"] .stRadio [data-baseweb="radio"]:hover label *,
+    [data-testid="stSidebar"] .stRadio [data-baseweb="radio"]:hover span {
+        color: #FFFFFF !important;
+    }
+    /* Active */
+    [data-testid="stSidebar"] .stRadio [data-baseweb="radio"][aria-checked="true"] {
+        background: rgba(4,81,228,0.18);
+    }
+    [data-testid="stSidebar"] .stRadio [data-baseweb="radio"][aria-checked="true"]::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 15%; bottom: 15%;
+        width: 3px;
+        background: #0451E4;
+        border-radius: 0 2px 2px 0;
+    }
+    [data-testid="stSidebar"] .stRadio [data-baseweb="radio"][aria-checked="true"] label,
+    [data-testid="stSidebar"] .stRadio [data-baseweb="radio"][aria-checked="true"] label *,
+    [data-testid="stSidebar"] .stRadio [data-baseweb="radio"][aria-checked="true"] span {
+        color: #FFFFFF !important;
+        font-weight: 600 !important;
+    }
+
+    /* Sidebar dividers */
+    [data-testid="stSidebar"] hr {
+        border-color: rgba(255,255,255,0.07);
+        margin: 0.6rem 0;
+    }
+
+    /* Main headings */
+    h1, h2, h3 { color: #0F172A; }
 </style>
 """, unsafe_allow_html=True)
 
-# Sidebar navigation
+# ---- SIDEBAR ----
 with st.sidebar:
-    # Logo YPF
+    # Logo + branding compact
     logo_path = Path(__file__).parent / "assets" / "logo_ypf.png"
     if logo_path.exists():
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.image(str(logo_path), width="stretch")
-    else:
-        st.markdown("### YPF BI Monitor")
 
     st.markdown("""
-    <div style="text-align: center; padding: 0.5rem 0 1.5rem 0;">
-        <h2 style="color: #0451E4; font-size: 1.5rem; margin: 0; font-weight: 700;
+    <div style="text-align: center; padding: 0 0 0.6rem 0;">
+        <h2 style="color: #FFFFFF; font-size: 1.25rem; margin: 0; font-weight: 700;
                    font-family: 'Fira Sans', sans-serif; letter-spacing: -0.02em;">
             BI Monitor
         </h2>
-        <p style="color: #cccccc; font-size: 0.8rem; margin-top: 0.5rem;
-                  font-family: 'Fira Sans', sans-serif; font-weight: 300;">
-            Suite de Herramientas Power BI
-        </p>
+        <span style="color: #94A3B8; font-size: 0.65rem;
+                     font-family: 'Fira Sans', sans-serif; font-weight: 500;
+                     text-transform: uppercase; letter-spacing: 0.1em;">
+            Power BI Suite
+        </span>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("---")
 
-    # Navigation menu
-    nav_options = [
+    page = st.radio("Nav", [
         "Home",
         "Power BI Analyzer",
         "Documentation Generator",
         "Layout Organizer",
         "DAX Optimizer",
-        "BI Bot",
-    ]
-    # Usage Dashboard always visible (access controlled inside the app)
-    nav_options.append("Usage Dashboard")
-
-    page = st.radio(
-        "Navegación",
-        nav_options,
-        label_visibility="collapsed"
-    )
+        "Usage Dashboard",
+    ], label_visibility="collapsed")
 
     st.markdown("---")
 
-    # Info box
+    # Info + footer compact
     st.markdown("""
-    <div style="background: rgba(4, 81, 228, 0.1);
-                padding: 1rem;
-                border-radius: 8px;
-                border-left: 4px solid #0451E4;
-                margin-top: 2rem;">
-        <p style="color: #0451E4; margin: 0; font-size: 0.85rem; font-weight: 600;
-                  font-family: 'Fira Sans', sans-serif;">
-            Informacion
+    <div style="background: rgba(4,81,228,0.08);
+                padding: 0.6rem 0.8rem;
+                border-radius: 6px;
+                border: 1px solid rgba(4,81,228,0.10);">
+        <p style="color: #CBD5E1; margin: 0; font-size: 0.7rem;
+                  font-family: 'Fira Sans', sans-serif; line-height: 1.5;">
+            Acciones registradas para analisis de uso.
         </p>
-        <p style="color: #cccccc; margin: 0.5rem 0 0 0; font-size: 0.75rem;
+    </div>
+    <div style="text-align: center; margin-top: 1rem; padding-top: 0.5rem;
+                border-top: 1px solid rgba(255,255,255,0.06);">
+        <p style="color: #94A3B8; font-size: 0.62rem; margin: 0;
                   font-family: 'Fira Sans', sans-serif;">
-            Todas las acciones quedan registradas para analisis de uso.
+            Para YPF - Equipo desarrollo torre visualización - 2026
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-    # Version info
-    st.markdown("""
-    <div style="text-align: center; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #333;">
-        <p style="color: #555; font-size: 0.7rem; margin: 0;
-                  font-family: 'Fira Sans', sans-serif; font-weight: 300;">
-            YPF S.A. &middot; Equipo de desarrollo de visualizacion
-        </p>
-        <p style="color: #555; font-size: 0.7rem; margin: 0.25rem 0 0 0;
-                  font-family: 'Fira Sans', sans-serif; font-weight: 300;">
-            v1.0 &middot; 2026
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-# Main content area - Routing
+# ---- ROUTING ----
 try:
     if page == "Home":
         home.render_app(logger)
@@ -176,8 +207,6 @@ try:
         layout_organizer.render_app(logger)
     elif page == "DAX Optimizer":
         dax_optimizer.render_app(logger)
-    elif page == "BI Bot":
-        bi_bot.render_app(logger)
     elif page == "Usage Dashboard":
         usage_dashboard.render_app(logger)
 except Exception as e:
@@ -185,10 +214,3 @@ except Exception as e:
     with st.expander("Ver detalles del error"):
         import traceback
         st.code(traceback.format_exc())
-
-    st.info("""
-    **Posibles soluciones:**
-    - Verifica que todas las dependencias estén instaladas
-    - Revisa que los archivos core de cada app estén en su lugar
-    - Consulta la documentación de la app específica
-    """)
