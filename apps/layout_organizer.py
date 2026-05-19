@@ -11,6 +11,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from apps_core.layout_core.shared_styles import render_app_header, render_footer
+
 
 def render_app(logger):
     """
@@ -27,6 +29,13 @@ def render_app(logger):
     usage_logger = logger
     LOGGING_ENABLED = logger is not None
 
+    # Header estándar YPF
+    render_app_header(
+        "Power BI Model Layout Organizer",
+        "Organiza automáticamente los diagramas de modelo de Power BI",
+        "1.0"
+    )
+
     # Estilos CSS personalizados - YPF Corporate Colors (Oficial - Guía Nov 2024)
     st.markdown("""
     <style>
@@ -37,13 +46,6 @@ def render_app(logger):
             --ypf-gray-1: #E6E6E6;    /* PANTONE 427 C */
             --ypf-gray-2: #AAAAAA;    /* PANTONE 429 C */
             --ypf-gray-3: #3C3C3C;    /* PANTONE 432 C */
-        }
-        .main-header {
-            font-size: 2.5rem;
-            color: #0451E4;
-            font-weight: bold;
-            margin-bottom: 1rem;
-            text-shadow: 0 2px 4px rgba(4, 81, 228, 0.2);
         }
         .info-box {
             padding: 1rem;
@@ -68,10 +70,6 @@ def render_app(logger):
         }
     </style>
     """, unsafe_allow_html=True)
-    
-    # Header
-    st.markdown('<div class="main-header">📊 Power BI Model Layout Organizer</div>', unsafe_allow_html=True)
-    st.markdown("**Organiza automáticamente los diagramas de modelo de Power BI**")
     
     # Tabs principales
     tab1, tab2, tab3, tab4 = st.tabs(["🎯 Organizar Layout", "🔍 Extraer Relaciones", "📊 Análisis", "ℹ️ Ayuda"])
@@ -605,11 +603,5 @@ def render_app(logger):
         - El archivo debe ser generado desde Power BI Desktop actual
         """)
     
-    # Footer
-    st.markdown("---")
-    st.markdown("""
-    <div style='text-align: center; color: #666;'>
-        <p>Power BI Model Layout Organizer v1.0</p>
-        <p>Desarrollado con ❤️ usando Streamlit</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Footer estándar YPF
+    render_footer()
