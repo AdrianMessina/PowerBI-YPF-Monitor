@@ -40,7 +40,8 @@ class DocxBuilderV3:
               er_diagram_path: Optional[str] = None,
               er_image_path: Optional[str] = None,
               visualization_images: Optional[List[str]] = None,
-              progress_callback=None) -> str:
+              progress_callback=None,
+              sections: Optional[List[str]] = None) -> str:
         """
         Build Word document by filling the template
 
@@ -57,6 +58,17 @@ class DocxBuilderV3:
         """
         self.logger.info("Starting document generation V3 with improved filling")
 
+        # All sections by default
+        if sections is None:
+            sections = [
+                "portada", "objetivo", "usuarios", "definiciones",
+                "origenes", "filtros", "modelo_er", "visualizaciones",
+                "rls", "anexo",
+            ]
+
+        def _include(name: str) -> bool:
+            return name in sections
+
         # Load template
         self._progress(progress_callback, 5, "Cargando template corporativo...")
         self._load_template()
@@ -67,42 +79,50 @@ class DocxBuilderV3:
         context = mapper.generate_context()
 
         try:
-            # Fill each section
-            self._progress(progress_callback, 15, "Rellenando portada...")
-            self._fill_portada(context)
+            # Fill each section (only if selected)
+            if _include("portada"):
+                self._progress(progress_callback, 15, "Rellenando portada...")
+                self._fill_portada(context)
+                self._progress(progress_callback, 25, "Rellenando versión del documento...")
+                self._fill_version_table(context)
 
-            self._progress(progress_callback, 25, "Rellenando versión del documento...")
-            self._fill_version_table(context)
+            if _include("objetivo"):
+                self._progress(progress_callback, 30, "Rellenando objetivo...")
+                self._fill_objective(context)
+                self._progress(progress_callback, 35, "Rellenando alcance...")
+                self._fill_scope(context)
 
-            self._progress(progress_callback, 30, "Rellenando objetivo...")
-            self._fill_objective(context)
+            if _include("usuarios"):
+                self._progress(progress_callback, 40, "Rellenando usuarios...")
+                self._fill_users(context)
 
-            self._progress(progress_callback, 35, "Rellenando alcance...")
-            self._fill_scope(context)
+            if _include("definiciones"):
+                self._progress(progress_callback, 50, "Rellenando definiciones (KPIs/Medidas)...")
+                self._fill_definitions(context)
 
-            self._progress(progress_callback, 40, "Rellenando usuarios...")
-            self._fill_users(context)
+            if _include("origenes"):
+                self._progress(progress_callback, 60, "Rellenando orígenes de datos...")
+                self._fill_data_sources(context)
 
-            self._progress(progress_callback, 50, "Rellenando definiciones (KPIs/Medidas)...")
-            self._fill_definitions(context)
+            if _include("filtros"):
+                self._progress(progress_callback, 70, "Rellenando filtros...")
+                self._fill_filters(context)
 
-            self._progress(progress_callback, 60, "Rellenando orígenes de datos...")
-            self._fill_data_sources(context)
+            if _include("modelo_er"):
+                self._progress(progress_callback, 80, "Rellenando modelo ER...")
+                self._fill_er_model(context, er_diagram_path, er_image_path)
 
-            self._progress(progress_callback, 70, "Rellenando filtros...")
-            self._fill_filters(context)
+            if _include("visualizaciones"):
+                self._progress(progress_callback, 85, "Agregando visualizaciones del reporte...")
+                self._fill_visualizations_section(context, visualization_images or [])
 
-            self._progress(progress_callback, 80, "Rellenando modelo ER...")
-            self._fill_er_model(context, er_diagram_path, er_image_path)
+            if _include("rls"):
+                self._progress(progress_callback, 90, "Rellenando RLS y seguridad...")
+                self._fill_rls(context)
 
-            self._progress(progress_callback, 85, "Agregando visualizaciones del reporte...")
-            self._fill_visualizations_section(context, visualization_images or [])
-
-            self._progress(progress_callback, 90, "Rellenando RLS y seguridad...")
-            self._fill_rls(context)
-
-            self._progress(progress_callback, 95, "Rellenando anexo...")
-            self._fill_appendix(context)
+            if _include("anexo"):
+                self._progress(progress_callback, 95, "Rellenando anexo...")
+                self._fill_appendix(context)
 
             # Save document
             self._progress(progress_callback, 98, "Guardando documento...")
