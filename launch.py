@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import os
 
 print("Installing dependencies from requirements.txt...")
 subprocess.run([
@@ -7,9 +8,9 @@ subprocess.run([
     "-q", "-r", "requirements.txt"
 ], check=True)
 
-print("Starting Streamlit on port 8100...")
+print(f"Starting Streamlit on port {os.getenv('CDSW_APP_PORT', '8080')}...")
 subprocess.run([
     "streamlit", "run", "main.py",
-    "--server.port", "8100",
-    "--server.address", "0.0.0.0"
+    "--server.port", os.getenv("CDSW_APP_PORT", "8080"),
+    "--server.address", "127.0.0.1"
 ])
