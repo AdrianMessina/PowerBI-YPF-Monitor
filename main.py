@@ -190,7 +190,7 @@ with st.sidebar:
                 border-top: 1px solid rgba(255,255,255,0.06);">
         <p style="color: #94A3B8; font-size: 0.62rem; margin: 0;
                   font-family: 'Fira Sans', sans-serif;">
-            Para YPF - Equipo desarrollo torre visualización - 2026
+            Para YPF - Gerencia Visualización - DAIA
         </p>
     </div>
     """, unsafe_allow_html=True)
