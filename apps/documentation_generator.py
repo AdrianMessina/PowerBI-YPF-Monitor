@@ -8,9 +8,71 @@ import sys
 import logging
 from pathlib import Path
 from datetime import datetime
+import zipfile
+import shutil
+import os
 
 # Initialize logger
 logger = logging.getLogger(__name__)
+
+
+def extract_pbip_from_zip(uploaded_file, extract_to="/home/cdsw/pbip_projects"):
+    """
+    Extrae un archivo ZIP con estructura PBIP y retorna la ruta al archivo .pbip
+
+    Args:
+        uploaded_file: UploadedFile de Streamlit
+        extract_to: Directorio donde extraer (default: /home/cdsw/pbip_projects)
+
+    Returns:
+        str: Ruta al archivo .pbip encontrado, o None si hay error
+    """
+    try:
+        # Crear directorio si no existe
+        os.makedirs(extract_to, exist_ok=True)
+
+        # Nombre del proyecto (sin extensión .zip)
+        project_name = Path(uploaded_file.name).stem
+        project_path = Path(extract_to) / project_name
+
+        # Si ya existe, eliminar para evitar conflictos
+        if project_path.exists():
+            shutil.rmtree(project_path)
+
+        # Crear carpeta del proyecto
+        project_path.mkdir(parents=True, exist_ok=True)
+
+        # Extraer ZIP
+        with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
+            zip_ref.extractall(project_path)
+
+        # Buscar archivo .pbip
+        pbip_files = list(project_path.glob("**/*.pbip"))
+
+        if not pbip_files:
+            st.error(f"❌ No se encontró archivo .pbip dentro del ZIP")
+            return None
+
+        if len(pbip_files) > 1:
+            st.warning(f"⚠️ Se encontraron {len(pbip_files)} archivos .pbip. Usando el primero: {pbip_files[0].name}")
+
+        pbip_path = str(pbip_files[0])
+
+        # Verificar que existan las carpetas necesarias
+        pbip_dir = pbip_files[0].parent
+        semantic_dir = pbip_dir / f"{pbip_files[0].stem}.SemanticModel"
+
+        if not semantic_dir.exists():
+            st.warning(f"⚠️ Carpeta .SemanticModel faltante. El análisis puede ser incompleto.")
+
+        return pbip_path
+
+    except zipfile.BadZipFile:
+        st.error("❌ El archivo no es un ZIP válido")
+        return None
+    except Exception as e:
+        st.error(f"❌ Error al extraer ZIP: {str(e)}")
+        return None
 
 
 def render_app(logger_suite):
@@ -47,77 +109,109 @@ def render_app(logger_suite):
     
     # PBIP File Selection
     st.markdown("### Archivo PBIP")
-    
-    # Try auto-detect first
-    pbip_folder = project_root / "PBI test"
-    pbip_files = []
-    if pbip_folder.exists():
-        pbip_files = [f for f in pbip_folder.glob("*.pbip") if f.is_file()]
-    
-    # Set default path if found
-    if pbip_files:
-        pbip_file_path = pbip_files[0]
-        default_path = str(pbip_file_path.resolve())
-        st.success(f"✅ Archivo detectado: **{pbip_file_path.name}**")
-        st.info(f"📂 Ruta completa: `{default_path}`")
-    else:
-        default_path = ""
-    
-    # Always show text input (editable)
-    manual_path_input = st.text_input(
-        "Ruta del archivo PBIP (editable)",
-        value=default_path,
-        placeholder=r"C:\ruta\completa\al\archivo.pbip",
-        help="Pega la ruta completa del archivo .pbip (se detectan y eliminan comillas automáticamente)"
-    )
 
-    # Instructions on how to copy path
-    with st.expander("💡 ¿Cómo copiar la ruta del archivo?"):
+    # Detectar entorno
+    is_cloud = os.getenv('DEPLOYMENT_ENV') == 'production'
+    pbip_path = None
+    manual_path_input = None
+
+    if is_cloud:
+        # ===== MODO CLOUD: ZIP UPLOAD =====
         st.markdown("""
-        **Opción A: Desde el Explorador de Windows**
-        1. Abre el Explorador de Windows
-        2. Navega hasta la carpeta que contiene tu archivo `.pbip`
-        3. **SHIFT + Click derecho** en el archivo `.pbip` → **Copiar como ruta de acceso**
-        4. Pega la ruta arriba ✅ **(se copiará con comillas, la app las procesa automáticamente)**
+        **📦 Sube tu proyecto PBIP comprimido (ZIP)**
 
-        **Opción B: Desde la barra de direcciones**
-        1. Abre el Explorador de Windows
-        2. Navega hasta la carpeta que contiene tu archivo `.pbip`
-        3. Click en la barra de direcciones arriba → Copiar
-        4. Pega la ruta arriba y agrega `\\NombreDeArchivo.pbip` al final
-
-        **Ejemplo de ruta válida:**
-        ```
-        C:\\Users\\TuUsuario\\Documentos\\MiProyecto\\Reporte.pbip
-        ```
-        O con comillas:
-        ```
-        "C:\\Users\\TuUsuario\\Documentos\\MiProyecto\\Reporte.pbip"
-        ```
-
-        **Estructura PBIP esperada:**
-        - Archivo principal: `reporte.pbip`
-        - Carpeta asociada: `reporte.SemanticModel/` (modelo de datos)
-        - Carpeta asociada: `reporte.Report/` (visualizaciones)
+        1. 📂 Localiza tu proyecto PBIP en Windows
+        2. 🗜️ **Comprime** el archivo `.pbip` y las 2 carpetas en un ZIP
+        3. ⬆️ **Sube el archivo ZIP** usando el botón de abajo
         """)
 
-    if manual_path_input:
-        # Clean path (remove quotes if present)
+        uploaded_file = st.file_uploader(
+            "Selecciona el archivo ZIP con tu proyecto PBIP:",
+            type=['zip'],
+            help="Archivo ZIP conteniendo: archivo.pbip, carpeta .SemanticModel y carpeta .Report",
+            key="docgen_zip_uploader"
+        )
+
+        if uploaded_file is not None:
+            with st.spinner("📦 Extrayendo proyecto PBIP..."):
+                pbip_path_str = extract_pbip_from_zip(uploaded_file)
+
+            if pbip_path_str:
+                pbip_path = Path(pbip_path_str)
+                st.success(f"✅ Proyecto extraído correctamente: `{pbip_path.name}`")
+
+    else:
+        # ===== MODO LOCAL: FILE PATH INPUT =====
+        # Try auto-detect first
+        pbip_folder = project_root / "PBI test"
+        pbip_files = []
+        if pbip_folder.exists():
+            pbip_files = [f for f in pbip_folder.glob("*.pbip") if f.is_file()]
+
+        # Set default path if found
+        if pbip_files:
+            pbip_file_path = pbip_files[0]
+            default_path = str(pbip_file_path.resolve())
+            st.success(f"✅ Archivo detectado: **{pbip_file_path.name}**")
+            st.info(f"📂 Ruta completa: `{default_path}`")
+        else:
+            default_path = ""
+
+        # Always show text input (editable)
+        manual_path_input = st.text_input(
+            "Ruta del archivo PBIP (editable)",
+            value=default_path,
+            placeholder=r"C:\ruta\completa\al\archivo.pbip",
+            help="Pega la ruta completa del archivo .pbip (se detectan y eliminan comillas automáticamente)"
+        )
+
+    # Instructions on how to copy path (solo en modo local)
+    if not is_cloud:
+        with st.expander("💡 ¿Cómo copiar la ruta del archivo?"):
+            st.markdown("""
+            **Opción A: Desde el Explorador de Windows**
+            1. Abre el Explorador de Windows
+            2. Navega hasta la carpeta que contiene tu archivo `.pbip`
+            3. **SHIFT + Click derecho** en el archivo `.pbip` → **Copiar como ruta de acceso**
+            4. Pega la ruta arriba ✅ **(se copiará con comillas, la app las procesa automáticamente)**
+
+            **Opción B: Desde la barra de direcciones**
+            1. Abre el Explorador de Windows
+            2. Navega hasta la carpeta que contiene tu archivo `.pbip`
+            3. Click en la barra de direcciones arriba → Copiar
+            4. Pega la ruta arriba y agrega `\\NombreDeArchivo.pbip` al final
+
+            **Ejemplo de ruta válida:**
+            ```
+            C:\\Users\\TuUsuario\\Documentos\\MiProyecto\\Reporte.pbip
+            ```
+            """)
+
+    # Procesar input según modo
+    if not is_cloud and manual_path_input:
+        # Modo local: procesar ruta manual
         clean_path = manual_path_input.strip().strip('"').strip("'")
         pbip_path = Path(clean_path)
-    
+
         if not pbip_path.exists():
             st.error(f"❌ El archivo no existe: `{pbip_path}`")
             st.warning("Verifica que la ruta sea correcta y el archivo exista")
             st.stop()
-    
+
         if pbip_path.suffix.lower() != '.pbip':
             st.error(f"❌ El archivo debe tener extensión .pbip (encontrado: `{pbip_path.suffix}`)")
             st.stop()
-    else:
+
+    elif not is_cloud and not manual_path_input:
+        # Modo local sin input
         st.warning("⚠️ Por favor especifica la ruta del archivo .pbip")
-        if pbip_folder.exists():
+        if 'pbip_folder' in locals() and pbip_folder.exists():
             st.info(f"💡 Coloca tu archivo .pbip en: `{pbip_folder.resolve()}`")
+        st.stop()
+
+    elif is_cloud and not pbip_path:
+        # Modo cloud sin archivo
+        st.info("⬆️ Sube un archivo ZIP con tu proyecto PBIP para continuar")
         st.stop()
     
     st.markdown("---")
