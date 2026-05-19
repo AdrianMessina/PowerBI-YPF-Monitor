@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power BI Analyzer - {{ report_name }}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Fira Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #F8FAFC;
+            color: #1E293B;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #000000 0%, #1a1a2e 100%);
+            padding: 2rem 3rem;
+            border-bottom: 4px solid #0451E4;
+        }
+        .header h1 {
+            color: #0451E4;
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+        .header .subtitle {
+            color: #cccccc;
+            font-size: 0.9rem;
+            margin-top: 0.3rem;
+        }
+        .header .meta {
+            color: #888;
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Score Section */
+        .score-section {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border-left: 5px solid #0451E4;
+        }
+        .score-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+        }
+        .score-circle.excellent { background: linear-gradient(135deg, #10B981, #059669); }
+        .score-circle.good { background: linear-gradient(135deg, #3B82F6, #2563EB); }
+        .score-circle.warning { background: linear-gradient(135deg, #F59E0B, #D97706); }
+        .score-circle.poor { background: linear-gradient(135deg, #EF4444, #DC2626); }
+        .score-circle small {
+            font-size: 0.7rem;
+            font-weight: 400;
+            opacity: 0.9;
+        }
+        .score-info h2 {
+            font-size: 1.4rem;
+            color: #1E293B;
+            margin-bottom: 0.3rem;
+        }
+        .score-info .category {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        .score-info .category.excellent { color: #10B981; }
+        .score-info .category.good { color: #3B82F6; }
+        .score-info .category.warning { color: #F59E0B; }
+        .score-info .category.poor { color: #EF4444; }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .metric-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.25rem;
+            border-left: 4px solid #0451E4;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: all 200ms ease-out;
+        }
+        .metric-card:hover {
+            box-shadow: 0 4px 16px rgba(4, 81, 228, 0.1);
+        }
+        .metric-card .value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #0451E4;
+        }
+        .metric-card .label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-top: 0.25rem;
+        }
+
+        /* Metric Scores */
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #1E293B;
+            margin: 2rem 0 1rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        .score-bars {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 2rem;
+        }
+        .score-bar-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .score-bar-item:last-child { margin-bottom: 0; }
+        .score-bar-label {
+            min-width: 140px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #1E293B;
+        }
+        .score-bar-track {
+            flex: 1;
+            height: 24px;
+            background: #F1F5F9;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+        .score-bar-fill {
+            height: 100%;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+            min-width: 2rem;
+            transition: width 0.5s ease-out;
+        }
+        .score-bar-value {
+            min-width: 40px;
+            text-align: right;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        /* Recommendations */
+        .recommendations {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 2rem;
+        }
+        .recommendation-item {
+            padding: 1rem;
+            border-left: 4px solid #E2E8F0;
+            margin-bottom: 0.75rem;
+            border-radius: 0 6px 6px 0;
+            background: #F8FAFC;
+            transition: all 200ms ease-out;
+        }
+        .recommendation-item:hover {
+            border-left-color: #0451E4;
+            background: rgba(4, 81, 228, 0.03);
+        }
+        .recommendation-item:last-child { margin-bottom: 0; }
+        .recommendation-item .severity {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-bottom: 0.4rem;
+        }
+        .severity.critical { background: #FEE2E2; color: #DC2626; }
+        .severity.warning { background: #FEF3C7; color: #D97706; }
+        .severity.info { background: #DBEAFE; color: #2563EB; }
+        .severity.good { background: #D1FAE5; color: #059669; }
+        .recommendation-item .text {
+            font-size: 0.9rem;
+            color: #1E293B;
+            line-height: 1.5;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            color: #666;
+            font-size: 0.75rem;
+            border-top: 1px solid #E2E8F0;
+            padding-top: 1rem;
+            margin-top: 2rem;
+        }
+
+        /* Print Styles */
+        @media print {
+            body { background: white; }
+            .header { break-after: avoid; }
+            .score-section { break-inside: avoid; }
+            .metric-card { break-inside: avoid; }
+            .recommendation-item { break-inside: avoid; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Power BI Analyzer Report</h1>
+    <div class="subtitle">{{ report_name }}</div>
+    <div class="meta">
+        {{ report_path }} | Generado: {{ analysis_date }}
+        | {{ developer }} - {{ team }}
+    </div>
+</div>
+
+<div class="container">
+
+    <!-- Score Overview -->
+    <div class="score-section">
+        {% set score_class = 'excellent' if score >= 80 else ('good' if score >= 60 else ('warning' if score >= 40 else 'poor')) %}
+        <div class="score-circle {{ score_class }}">
+            {{ score | round(0) }}
+            <small>/100</small>
+        </div>
+        <div class="score-info">
+            <h2>{{ report_name }}</h2>
+            <div class="category {{ score_class }}">{{ score_category }}</div>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <h3 class="section-title">Metricas del Modelo</h3>
+    <div class="metrics-grid">
+        {% if metrics.total_pages is defined %}
+        <div class="metric-card">
+            <div class="value">{{ metrics.total_pages }}</div>
+            <div class="label">Paginas</div>
+        </div>
+        {% endif %}
+        {% if metrics.total_visuals is defined %}
+        <div class="metric-card">
+            <div class="value">{{ metrics.total_visuals }}</div>
+            <div class="label">Visualizaciones</div>
+        </div>
+        {% endif %}
+        {% if metrics.total_tables is defined %}
+        <div class="metric-card">
+            <div class="value">{{ metrics.total_tables }}</div>
+            <div class="label">Tablas</div>
+        </div>
+        {% endif %}
+        {% if metrics.total_measures is defined %}
+        <div class="metric-card">
+            <div class="value">{{ metrics.total_measures }}</div>
+            <div class="label">Medidas</div>
+        </div>
+        {% endif %}
+        {% if metrics.total_columns is defined %}
+        <div class="metric-card">
+            <div class="value">{{ metrics.total_columns }}</div>
+            <div class="label">Columnas</div>
+        </div>
+        {% endif %}
+        {% if metrics.total_relationships is defined %}
+        <div class="metric-card">
+            <div class="value">{{ metrics.total_relationships }}</div>
+            <div class="label">Relaciones</div>
+        </div>
+        {% endif %}
+        {% if metrics.file_size_mb is defined %}
+        <div class="metric-card">
+            <div class="value">{{ metrics.file_size_mb | round(1) }} MB</div>
+            <div class="label">Tamano del Archivo</div>
+        </div>
+        {% endif %}
+        {% if metrics.avg_visuals_per_page is defined %}
+        <div class="metric-card">
+            <div class="value">{{ metrics.avg_visuals_per_page | round(1) }}</div>
+            <div class="label">Visuales/Pagina (Prom)</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Metric Scores -->
+    {% if metric_scores %}
+    <h3 class="section-title">Detalle de Puntuacion</h3>
+    <div class="score-bars">
+        {% for metric_name, metric_data in metric_scores.items() %}
+        <div class="score-bar-item">
+            <span class="score-bar-label">{{ metric_name | replace('_', ' ') | title }}</span>
+            <div class="score-bar-track">
+                {% set bar_color = '#10B981' if metric_data.status == 'good' else ('#F59E0B' if metric_data.status == 'warning' else '#EF4444') %}
+                <div class="score-bar-fill" style="width: {{ metric_data.score }}%; background: {{ bar_color }};">
+                </div>
+            </div>
+            <span class="score-bar-value" style="color: {{ bar_color }};">{{ metric_data.score | round(0) }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Recommendations -->
+    {% if recommendations %}
+    <h3 class="section-title">Recomendaciones ({{ recommendations | length }})</h3>
+    <div class="recommendations">
+        {% for rec in recommendations %}
+        <div class="recommendation-item">
+            {% if rec.severity is defined %}
+            <span class="severity {{ rec.severity | lower }}">{{ rec.severity }}</span>
+            {% endif %}
+            <div class="text">
+                {% if rec.message is defined %}
+                    {{ rec.message }}
+                {% elif rec is string %}
+                    {{ rec }}
+                {% else %}
+                    {{ rec }}
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Footer -->
+    <div class="footer">
+        Generado por Power BI Analyzer &middot; {{ developer }} &middot; {{ team }} &middot; YPF S.A. &middot; {{ analysis_date }}
+    </div>
+
+</div>
+
+</body>
+</html>
