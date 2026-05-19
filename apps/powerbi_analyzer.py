@@ -15,6 +15,74 @@ import pandas as pd
 import json
 import yaml
 import time
+import zipfile
+import shutil
+
+
+def extract_pbip_from_zip(uploaded_file, extract_to="/home/cdsw/pbip_projects"):
+    """
+    Extrae un archivo ZIP con estructura PBIP y retorna la ruta al archivo .pbip
+
+    Args:
+        uploaded_file: UploadedFile de Streamlit
+        extract_to: Directorio donde extraer (default: /home/cdsw/pbip_projects)
+
+    Returns:
+        str: Ruta al archivo .pbip encontrado, o None si hay error
+    """
+    try:
+        # Crear directorio si no existe
+        os.makedirs(extract_to, exist_ok=True)
+
+        # Nombre del proyecto (sin extensión .zip)
+        project_name = Path(uploaded_file.name).stem
+        project_path = Path(extract_to) / project_name
+
+        # Si ya existe, eliminar para evitar conflictos
+        if project_path.exists():
+            shutil.rmtree(project_path)
+
+        # Crear carpeta del proyecto
+        project_path.mkdir(parents=True, exist_ok=True)
+
+        # Extraer ZIP
+        with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
+            zip_ref.extractall(project_path)
+
+        # Buscar archivo .pbip
+        pbip_files = list(project_path.glob("**/*.pbip"))
+
+        if not pbip_files:
+            st.error(f"❌ No se encontró archivo .pbip dentro del ZIP")
+            return None
+
+        if len(pbip_files) > 1:
+            st.warning(f"⚠️ Se encontraron {len(pbip_files)} archivos .pbip. Usando el primero: {pbip_files[0].name}")
+
+        pbip_path = str(pbip_files[0])
+
+        # Verificar que existan las carpetas necesarias
+        pbip_dir = pbip_files[0].parent
+        report_dir = pbip_dir / f"{pbip_files[0].stem}.Report"
+        semantic_dir = pbip_dir / f"{pbip_files[0].stem}.SemanticModel"
+
+        missing_dirs = []
+        if not report_dir.exists():
+            missing_dirs.append(".Report")
+        if not semantic_dir.exists():
+            missing_dirs.append(".SemanticModel")
+
+        if missing_dirs:
+            st.warning(f"⚠️ Carpetas faltantes: {', '.join(missing_dirs)}. El análisis puede ser incompleto.")
+
+        return pbip_path
+
+    except zipfile.BadZipFile:
+        st.error("❌ El archivo no es un ZIP válido")
+        return None
+    except Exception as e:
+        st.error(f"❌ Error al extraer ZIP: {str(e)}")
+        return None
 
 
 def render_app(logger):
@@ -1139,72 +1207,125 @@ def render_app(logger):
                 - El analizador detectará todas las carpetas del proyecto automáticamente
                 """)
 
-        st.markdown("**📋 Paso a paso para copiar la ruta:**")
+        # Detectar entorno (Cloud vs Local)
+        is_cloud = os.getenv('DEPLOYMENT_ENV') == 'production'
+        file_to_analyze = None
 
-        st.markdown("""
-        <div style='background-color: #0451E4;
-                    padding: 0.75rem 1rem;
-                    border-radius: 6px;
-                    border: 2px solid #000000;
-                    margin: 1rem 0;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
-            <p style='color: #000; margin: 0; font-weight: 700; font-size: 0.85rem;'>
-                ⚠️ IMPORTANTE: Copia el archivo .pbip, NO la carpeta
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+        if is_cloud:
+            # ===== MODO CLOUD: ZIP UPLOAD =====
+            st.markdown("""
+            <div style='background-color: #0451E4;
+                        padding: 0.75rem 1rem;
+                        border-radius: 6px;
+                        border: 2px solid #000000;
+                        margin: 1rem 0;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
+                <p style='color: #000; margin: 0; font-weight: 700; font-size: 0.85rem;'>
+                    📦 Sube tu proyecto PBIP comprimido (ZIP)
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
 
-        st.markdown("""
-        1. 📂 Abre el **Explorador de Windows**
-        2. 🔍 Navega hasta la carpeta de tu proyecto
-        3. 📄 Busca el archivo que termina en **`.pbip`** (ícono de Power BI)
-        4. ➡️ Click derecho en el archivo → **Copiar como ruta de acceso**
-        5. 📋 **Pega** la ruta en el campo de abajo (Ctrl+V)
+            st.markdown("""
+            **📋 Preparar tu proyecto para análisis:**
 
-        **Nota:** Windows agregará comillas automáticamente - ¡no te preocupes! El analizador las quitará.
-        """)
+            1. 📂 Localiza tu proyecto PBIP en Windows:
+               ```
+               📁 MiCarpeta/
+               ├── 📄 MiReporte.pbip
+               ├── 📁 MiReporte.Report/
+               └── 📁 MiReporte.SemanticModel/
+               ```
 
-        pbip_path = st.text_input(
-            "Ruta del archivo .pbip:",
-            placeholder=r'C:\Users\TuUsuario\MiCarpeta\MiReporte.pbip',
-            help="Pega la ruta completa del archivo .pbip (puede incluir comillas). Ejemplo: \"C:\\Proyectos\\MiReporte.pbip\""
-        )
+            2. 🗜️ **Comprime los 3 elementos** en un ZIP:
+               - Selecciona el archivo `.pbip` y las 2 carpetas
+               - Click derecho → "Enviar a" → "Carpeta comprimida"
 
-        # Validación mejorada - ARREGLADA para aceptar archivos .pbip
-        if pbip_path:
-            # Limpiar espacios y comillas (automáticas de Windows)
-            pbip_path = pbip_path.strip().strip('"').strip("'")
+            3. ⬆️ **Sube el archivo ZIP** usando el botón de abajo
 
-            if not os.path.exists(pbip_path):
-                st.error("❌ La ruta ingresada no existe. Verifica que la ruta sea correcta.")
-                st.warning("💡 **Tip**: Copia la ruta completa desde el Explorador de Windows (Ctrl+C en la barra de direcciones)")
-                file_to_analyze = None
-            elif os.path.isfile(pbip_path):
-                # Es un archivo - verificar si es .pbip
-                if pbip_path.endswith('.pbip'):
-                    st.success("✅ Archivo PBIP detectado correctamente")
-                    st.info("📁 El analizador buscará automáticamente las carpetas .Report y .SemanticModel")
-                    file_to_analyze = pbip_path
-                else:
-                    st.error("❌ El archivo debe tener extensión .pbip")
-                    st.info("💡 Busca el archivo que termina en `.pbip` en la carpeta de tu proyecto")
-                    file_to_analyze = None
-            elif os.path.isdir(pbip_path):
-                # Es una carpeta
-                if pbip_path.endswith('.Report') or pbip_path.endswith('.SemanticModel') or pbip_path.endswith('.Dataset'):
-                    st.success("✅ Carpeta de proyecto PBIP detectada")
-                    st.info("📁 Se analizarán automáticamente las carpetas .Report y .SemanticModel")
-                    file_to_analyze = pbip_path
-                else:
-                    # Ruta genérica, intentar de todas formas
-                    st.warning("⚠️ La carpeta no tiene una extensión PBIP reconocida (.Report, .SemanticModel)")
-                    st.info("ℹ️ Se intentará analizar de todas formas. Si contiene carpetas del proyecto, funcionará.")
-                    file_to_analyze = pbip_path
-            else:
-                st.error("❌ La ruta no es válida")
-                file_to_analyze = None
+            **Nota:** El archivo ZIP debe contener el `.pbip` y las carpetas en la raíz (no dentro de subcarpetas).
+            """)
+
+            uploaded_file = st.file_uploader(
+                "Selecciona el archivo ZIP con tu proyecto PBIP:",
+                type=['zip'],
+                help="Archivo ZIP conteniendo: archivo.pbip, carpeta .Report y carpeta .SemanticModel"
+            )
+
+            if uploaded_file is not None:
+                with st.spinner("📦 Extrayendo proyecto PBIP..."):
+                    file_to_analyze = extract_pbip_from_zip(uploaded_file)
+
+                if file_to_analyze:
+                    st.success(f"✅ Proyecto extraído correctamente: `{Path(file_to_analyze).name}`")
+                    st.info("📁 El analizador procesará automáticamente las carpetas .Report y .SemanticModel")
+
         else:
-            file_to_analyze = None
+            # ===== MODO LOCAL: FILE PATH INPUT =====
+            st.markdown("**📋 Paso a paso para copiar la ruta:**")
+
+            st.markdown("""
+            <div style='background-color: #0451E4;
+                        padding: 0.75rem 1rem;
+                        border-radius: 6px;
+                        border: 2px solid #000000;
+                        margin: 1rem 0;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
+                <p style='color: #000; margin: 0; font-weight: 700; font-size: 0.85rem;'>
+                    ⚠️ IMPORTANTE: Copia el archivo .pbip, NO la carpeta
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            1. 📂 Abre el **Explorador de Windows**
+            2. 🔍 Navega hasta la carpeta de tu proyecto
+            3. 📄 Busca el archivo que termina en **`.pbip`** (ícono de Power BI)
+            4. ➡️ Click derecho en el archivo → **Copiar como ruta de acceso**
+            5. 📋 **Pega** la ruta en el campo de abajo (Ctrl+V)
+
+            **Nota:** Windows agregará comillas automáticamente - ¡no te preocupes! El analizador las quitará.
+            """)
+
+            pbip_path = st.text_input(
+                "Ruta del archivo .pbip:",
+                placeholder=r'C:\Users\TuUsuario\MiCarpeta\MiReporte.pbip',
+                help="Pega la ruta completa del archivo .pbip (puede incluir comillas). Ejemplo: \"C:\\Proyectos\\MiReporte.pbip\""
+            )
+
+            # Validación mejorada
+            if pbip_path:
+                # Limpiar espacios y comillas (automáticas de Windows)
+                pbip_path = pbip_path.strip().strip('"').strip("'")
+
+                if not os.path.exists(pbip_path):
+                    st.error("❌ La ruta ingresada no existe. Verifica que la ruta sea correcta.")
+                    st.warning("💡 **Tip**: Copia la ruta completa desde el Explorador de Windows (Ctrl+C en la barra de direcciones)")
+                    file_to_analyze = None
+                elif os.path.isfile(pbip_path):
+                    # Es un archivo - verificar si es .pbip
+                    if pbip_path.endswith('.pbip'):
+                        st.success("✅ Archivo PBIP detectado correctamente")
+                        st.info("📁 El analizador buscará automáticamente las carpetas .Report y .SemanticModel")
+                        file_to_analyze = pbip_path
+                    else:
+                        st.error("❌ El archivo debe tener extensión .pbip")
+                        st.info("💡 Busca el archivo que termina en `.pbip` en la carpeta de tu proyecto")
+                        file_to_analyze = None
+                elif os.path.isdir(pbip_path):
+                    # Es una carpeta
+                    if pbip_path.endswith('.Report') or pbip_path.endswith('.SemanticModel') or pbip_path.endswith('.Dataset'):
+                        st.success("✅ Carpeta de proyecto PBIP detectada")
+                        st.info("📁 Se analizarán automáticamente las carpetas .Report y .SemanticModel")
+                        file_to_analyze = pbip_path
+                    else:
+                        # Ruta genérica, intentar de todas formas
+                        st.warning("⚠️ La carpeta no tiene una extensión PBIP reconocida (.Report, .SemanticModel)")
+                        st.info("ℹ️ Se intentará analizar de todas formas. Si contiene carpetas del proyecto, funcionará.")
+                        file_to_analyze = pbip_path
+                else:
+                    st.error("❌ La ruta no es válida")
+                    file_to_analyze = None
     
         if file_to_analyze:
             try:
