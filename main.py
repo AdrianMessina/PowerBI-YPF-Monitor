@@ -188,12 +188,17 @@ with st.sidebar:
     </div>
     <div style="text-align: center; margin-top: 1rem; padding-top: 0.5rem;
                 border-top: 1px solid rgba(255,255,255,0.06);">
-        <p style="color: #94A3B8; font-size: 0.62rem; margin: 0;
+        <p style="color: #94A3B8; font-size: 0.62rem; margin: 0 0 0.5rem 0;
                   font-family: 'Fira Sans', sans-serif;">
             Para YPF - Gerencia Visualización - DAIA
         </p>
     </div>
     """, unsafe_allow_html=True)
+
+    # Logo DAIA en sidebar
+    logo_daia_path = Path(__file__).parent / "assets" / "logo_daia.png"
+    if logo_daia_path.exists():
+        st.image(str(logo_daia_path), width=180)
 
 # ---- ROUTING ----
 try:
