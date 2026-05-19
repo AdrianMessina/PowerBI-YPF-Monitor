@@ -137,6 +137,20 @@ def render_app(logger):
             font-weight: 600;
             color: #000000;
         }
+
+        /* Sidebar Expanders - Better Contrast */
+        [data-testid="stSidebar"] .streamlit-expanderHeader,
+        [data-testid="stSidebar"] details summary,
+        [data-testid="stSidebar"] summary {
+            color: #E2E8F0 !important;
+            font-weight: 600 !important;
+        }
+        [data-testid="stSidebar"] .streamlit-expanderContent,
+        [data-testid="stSidebar"] details div[role="region"],
+        [data-testid="stSidebar"] .streamlit-expanderContent p,
+        [data-testid="stSidebar"] .streamlit-expanderContent li {
+            color: #CBD5E1 !important;
+        }
         </style>
     """, unsafe_allow_html=True)
     
@@ -1015,9 +1029,9 @@ def render_app(logger):
             with col2:
                 st.image("https://img.icons8.com/color/96/000000/power-bi.png", width=50)
     
-            st.markdown("<h3 style='text-align: center; color: #000000; font-weight: 700; margin: 0.3rem 0 0.5rem 0;'>Configuración</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='text-align: center; color: #E2E8F0; font-weight: 700; margin: 0.3rem 0 0.5rem 0;'>Configuración</h3>", unsafe_allow_html=True)
     
-            # Información de Torre Visualización y Desarrollador (SUAVE Y DISCRETO)
+            # Información de Equipo de Desarrollo
             st.markdown("""
                 <div style='background: rgba(4, 81, 228, 0.06);
                             padding: 0.6rem 0.75rem;
@@ -1025,11 +1039,8 @@ def render_app(logger):
                             margin: 0.75rem 0;
                             border-left: 3px solid #0451E4;
                             box-shadow: 0 1px 3px rgba(0,0,0,0.05);'>
-                    <p style='margin: 0; font-size: 0.62rem; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;'>
-                        🏢 Torre Visualización
-                    </p>
-                    <p style='margin: 0.25rem 0 0 0; font-size: 0.78rem; color: #333; font-weight: 600;'>
-                        Adrián J. Messina
+                    <p style='margin: 0; font-size: 0.78rem; color: #E2E8F0; font-weight: 600;'>
+                        Equipo de desarrollo - Torre Visualización
                     </p>
                 </div>
             """, unsafe_allow_html=True)

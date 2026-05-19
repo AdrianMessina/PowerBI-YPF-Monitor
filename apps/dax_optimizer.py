@@ -1027,7 +1027,7 @@ def render_app(logger):
             <div style="text-align: center; padding: 10px; background: #f8f9fa; border-radius: 8px;">
                 <p style="margin: 0; font-size: 0.85rem; color: #6c757d;">Versión</p>
                 <code style="font-size: 1rem; color: #0451E4; font-weight: 600;">v1.1.2</code>
-                <p style="margin: 5px 0 0 0; font-size: 0.75rem; color: #adb5bd;">Build 2026.02.03</p>
+                <p style="margin: 5px 0 0 0; font-size: 0.75rem; color: #6B7280;">Build 2026.02.03</p>
             </div>
             """, unsafe_allow_html=True)
     

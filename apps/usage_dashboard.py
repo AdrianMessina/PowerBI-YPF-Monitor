@@ -1,16 +1,89 @@
 """
 Usage Dashboard - Metricas de Uso de YPF BI Monitor
-Herramienta interna con acceso restringido (solo administradores)
+Herramienta interna con acceso restringido por email corporativo
 """
 
 import streamlit as st
 import pandas as pd
+import json
+import os
+from pathlib import Path
 from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
 
 from apps_core.layout_core.shared_styles import render_app_header, render_footer
-from shared.auth import Authenticator
+
+
+# Authorized users whitelist (emails or Windows usernames)
+AUTHORIZED_USERS = [
+    "se43617",
+    "se46958",
+    "nicolas.ursino",
+    "se42998",
+    "se41714",
+    "se48659",
+    "se48762",
+]
+
+
+def _get_current_user() -> str:
+    """Get current Windows username (lowercase for comparison)."""
+    return os.environ.get('USERNAME', os.environ.get('USER', '')).lower()
+
+
+def _check_admin_access() -> bool:
+    """
+    Verify admin access via email whitelist or manual login.
+    Returns True if authenticated, False otherwise.
+    """
+    # Check if already authenticated in this session
+    if st.session_state.get('admin_authenticated', False):
+        return True
+
+    # Auto-authenticate if Windows username matches whitelist
+    current_user = _get_current_user()
+    if current_user in AUTHORIZED_USERS:
+        st.session_state.admin_authenticated = True
+        st.session_state.admin_user = current_user
+        return True
+
+    # Manual login for users not auto-detected
+    st.markdown("""
+    <div style="max-width: 450px; margin: 2rem auto; padding: 2rem;
+                background: #f8f9fa; border-radius: 10px;
+                border: 1px solid #E2E8F0; text-align: center;">
+        <h3 style="color: #1E293B; margin-bottom: 0.5rem;
+                   font-family: 'Fira Sans', sans-serif;">Acceso Restringido</h3>
+        <p style="color: #666; font-size: 0.9rem; font-family: 'Fira Sans', sans-serif;">
+            Esta herramienta es solo para usuarios autorizados.<br>
+            Ingresa tu email corporativo para verificar acceso.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 1.5, 1])
+    with col2:
+        email_input = st.text_input(
+            "Email corporativo",
+            key="admin_email_input",
+            placeholder="seXXXXX@grupo.ypf.com"
+        )
+
+        if st.button("Verificar acceso", use_container_width=True, key="admin_login_btn"):
+            if email_input:
+                # Extract username from email (e.g. "se46958" from "se46958@grupo.ypf.com")
+                email_user = email_input.strip().lower().split('@')[0]
+                if email_user in AUTHORIZED_USERS:
+                    st.session_state.admin_authenticated = True
+                    st.session_state.admin_user = email_user
+                    st.rerun()
+                else:
+                    st.error("Tu email no tiene acceso a esta herramienta.")
+            else:
+                st.warning("Ingresa tu email corporativo.")
+
+    return False
 
 
 def render_app(logger):
@@ -26,21 +99,54 @@ def render_app(logger):
         "1.0"
     )
 
-    # Require admin authentication
-    auth = Authenticator()
-    if not auth.require_auth(admin_only=True):
+    # Admin authentication gate
+    if not _check_admin_access():
         render_footer()
         return
 
     # Show logged-in user and logout option
-    auth.render_user_info()
+    admin_user = st.session_state.get('admin_user', _get_current_user())
+    col1, col2, col3 = st.columns([4, 2, 1])
+    with col2:
+        st.markdown(f"<p style='color: #666; font-size: 0.85rem; padding-top: 0.5rem; text-align: right;'>"
+                    f"Usuario: <strong>{admin_user}</strong></p>", unsafe_allow_html=True)
+    with col3:
+        if st.button("Cerrar sesion", key="admin_logout"):
+            st.session_state.admin_authenticated = False
+            st.session_state.pop('admin_user', None)
+            st.rerun()
 
-    # Get events from logger backend
-    all_events = logger.get_all_events()
+    # Find log files
+    logs_dir = Path(__file__).parent.parent / "logs"
 
-    if not all_events:
+    if not logs_dir.exists():
+        st.warning("No se encontraron logs de uso todavia.")
+        st.info("Los logs se crearan automaticamente cuando uses las aplicaciones.")
+        render_footer()
+        return
+
+    log_files = list(logs_dir.glob("usage_*.jsonl"))
+
+    if not log_files:
         st.warning("No hay datos de uso disponibles todavia.")
         st.info("Usa las aplicaciones y luego regresa aqui para ver las estadisticas.")
+        render_footer()
+        return
+
+    # Read all logs
+    all_events = []
+    for log_file in log_files:
+        try:
+            with open(log_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.strip():
+                        event = json.loads(line)
+                        all_events.append(event)
+        except Exception as e:
+            st.error(f"Error leyendo {log_file.name}: {e}")
+
+    if not all_events:
+        st.warning("No se pudieron leer los eventos de uso.")
         render_footer()
         return
 

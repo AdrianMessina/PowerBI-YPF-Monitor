@@ -306,7 +306,34 @@ def render_app(logger_suite):
             frecuencia_flujo = "No especificada"
     
         st.markdown("---")
-    
+
+        # SECTION 5: Sections to include
+        st.markdown('<div class="section-header">📑 SECCIONES A DOCUMENTAR</div>', unsafe_allow_html=True)
+        st.caption("Selecciona las secciones que deseas incluir en el documento. Por defecto se generan todas.")
+
+        all_sections = {
+            "portada": "Portada y Versión",
+            "objetivo": "Objetivo y Alcance",
+            "usuarios": "Usuarios y Destinatarios",
+            "definiciones": "Definiciones (KPIs / Medidas DAX)",
+            "origenes": "Orígenes de Datos (Power Query M)",
+            "filtros": "Filtros del Reporte",
+            "modelo_er": "Modelo de Relaciones (ER)",
+            "visualizaciones": "Visualizaciones del Reporte",
+            "rls": "Seguridad (RLS)",
+            "anexo": "Anexo Técnico",
+        }
+
+        selected_sections = []
+        col1, col2 = st.columns(2)
+        section_items = list(all_sections.items())
+        for i, (key, label) in enumerate(section_items):
+            with col1 if i % 2 == 0 else col2:
+                if st.checkbox(label, value=True, key=f"sec_{key}"):
+                    selected_sections.append(key)
+
+        st.markdown("---")
+
         # Generate button
         generate = st.form_submit_button(
             "🚀 GENERAR DOCUMENTO WORD",
@@ -423,13 +450,14 @@ def render_app(logger_suite):
             }
     
             # Find template - Buscar en múltiples ubicaciones
+            template_name = "Plantilla Documentacion Técnica Funcional Power Bi.docx"
             template_locations = [
-                # Ubicación principal: dentro del proyecto (funciona para todos los usuarios)
-                project_root / "templates" / "docgen" / "plantilla_corporativa_ypf.docx",
+                # Ubicación principal: dentro del proyecto
+                project_root / "templates" / "docgen" / template_name,
                 # Fallback: directamente en templates
-                project_root / "templates" / "plantilla_corporativa_ypf.docx",
+                project_root / "templates" / template_name,
                 # Fallback: carpeta padre del proyecto
-                project_root.parent / "Plantilla Documentacion Técnica Funcional Power Bi.docx",
+                project_root.parent / template_name,
             ]
 
             template_path = None
@@ -440,7 +468,7 @@ def render_app(logger_suite):
 
             if not template_path:
                 st.error("Template no encontrado. Verifica que exista:")
-                st.code("templates/docgen/plantilla_corporativa_ypf.docx")
+                st.code(f"templates/docgen/{template_name}")
                 st.info("Descarga el template desde el repositorio de GitHub y colocalo en la carpeta 'templates/docgen/'")
                 st.stop()
     
@@ -456,7 +484,8 @@ def render_app(logger_suite):
                 er_diagram_path=er_diagram_path,
                 er_image_path=er_image_path,
                 visualization_images=viz_image_paths,
-                progress_callback=progress_callback
+                progress_callback=progress_callback,
+                sections=selected_sections
             )
     
             progress.progress(100)
