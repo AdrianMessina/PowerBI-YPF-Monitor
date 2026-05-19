@@ -754,12 +754,23 @@ def render_app_header(title: str, subtitle: str = "", version: str = ""):
 
 
 def render_footer():
-    """Render a standardized YPF footer."""
+    """Render a standardized YPF footer with DAIA logo."""
+    from pathlib import Path
+
+    # Logo DAIA
+    logo_daia_path = Path(__file__).parent.parent.parent / "assets" / "logo_daia.png"
+
     st.markdown("""
-    <div class="ypf-footer">
+    <div class="ypf-footer" style="text-align: center;">
         Para YPF - Gerencia Visualización - DAIA
     </div>
     """, unsafe_allow_html=True)
+
+    # Logo DAIA centrado debajo del texto
+    if logo_daia_path.exists():
+        _, col2, _ = st.columns([2, 1, 2])
+        with col2:
+            st.image(str(logo_daia_path), width=150)
 
 
 def render_skeleton(rows: int = 3):
