@@ -11,6 +11,8 @@ from pathlib import Path
 import sys
 import os
 import time
+import zipfile
+import shutil
 
 # Streamlit extras para componentes visuales mejorados (OPCIONAL)
 try:
@@ -62,8 +64,67 @@ def render_app(logger):
     # Variable para logger
     usage_logger = logger
     LOGGING_ENABLED = logger is not None
-    
-    
+
+
+    def extract_pbip_from_zip(uploaded_file, extract_to="/home/cdsw/pbip_projects"):
+        """
+        Extrae un archivo ZIP con estructura PBIP y retorna la ruta al archivo .pbip
+
+        Args:
+            uploaded_file: UploadedFile de Streamlit
+            extract_to: Directorio donde extraer (default: /home/cdsw/pbip_projects)
+
+        Returns:
+            str: Ruta al archivo .pbip encontrado, o None si hay error
+        """
+        try:
+            # Crear directorio si no existe
+            os.makedirs(extract_to, exist_ok=True)
+
+            # Nombre del proyecto (sin extensión .zip)
+            project_name = Path(uploaded_file.name).stem
+            project_path = Path(extract_to) / project_name
+
+            # Si ya existe, eliminar para evitar conflictos
+            if project_path.exists():
+                shutil.rmtree(project_path)
+
+            # Crear carpeta del proyecto
+            project_path.mkdir(parents=True, exist_ok=True)
+
+            # Extraer ZIP
+            with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
+                zip_ref.extractall(project_path)
+
+            # Buscar archivo .pbip
+            pbip_files = list(project_path.glob("**/*.pbip"))
+
+            if not pbip_files:
+                st.error(f"❌ No se encontró archivo .pbip dentro del ZIP")
+                return None
+
+            if len(pbip_files) > 1:
+                st.warning(f"⚠️ Se encontraron {len(pbip_files)} archivos .pbip. Usando el primero: {pbip_files[0].name}")
+
+            pbip_path = str(pbip_files[0])
+
+            # Verificar que existan las carpetas necesarias
+            pbip_dir = pbip_files[0].parent
+            semantic_dir = pbip_dir / f"{pbip_files[0].stem}.SemanticModel"
+
+            if not semantic_dir.exists():
+                st.warning(f"⚠️ Carpeta .SemanticModel faltante. El análisis puede ser incompleto.")
+
+            return pbip_path
+
+        except zipfile.BadZipFile:
+            st.error("❌ El archivo no es un ZIP válido")
+            return None
+        except Exception as e:
+            st.error(f"❌ Error al extraer ZIP: {str(e)}")
+            return None
+
+
     # Import shared styles
     from apps_core.layout_core.shared_styles import render_app_header, render_footer
 
@@ -215,66 +276,69 @@ def render_app(logger):
     
     def render_file_upload():
         """Renderiza la sección de carga de archivo o carpeta PBIP"""
+        is_cloud = os.getenv('DEPLOYMENT_ENV') == 'production'
+
         with st.expander("📁 Cargar archivo PBIP", expanded=True):
-            st.info("""
-            **ℹ️ Estructura de archivos PBIP:**
-    
-            Cuando guardas un archivo como PBIP en Power BI Desktop, se generan:
-            - 📄 Un archivo `.pbip` (archivo de configuración JSON)
-            - 📁 Una carpeta `.SemanticModel` (contiene el modelo de datos)
-            - 📁 Una carpeta `.Report` (contiene el reporte)
-    
-            **Puedes pegar la ruta a cualquiera de estos:**
-            1. La ruta al archivo `.pbip` (Ejemplo: `C:\\Users\\...\\MiReporte.pbip`)
-            2. La ruta a la carpeta `.SemanticModel` (Ejemplo: `C:\\Users\\...\\MiReporte.SemanticModel`)
-            3. La ruta a la carpeta padre que contiene todo
-            """)
-    
-            # Opción 1: Ruta a archivo/carpeta PBIP (recomendado)
-            st.markdown("**Opción 1: Pegar ruta** (Recomendado)")
-            pbip_folder_path = st.text_input(
-                "Pega la ruta completa al archivo .pbip o a la carpeta .SemanticModel",
-                placeholder=r"C:\Users\...\MiReporte.pbip",
-                help="Copia y pega la ruta completa al archivo .pbip. ✅ Puedes pegar la ruta CON comillas, la aplicación las detecta automáticamente."
-            )
-    
-            # Nota sobre comillas
-            st.success("✅ **Nota importante:** Si al copiar la ruta esta incluye comillas (como `\"C:\\Users\\...\\archivo.pbip\"`), ¡no te preocupes! La aplicación las reconoce y procesa correctamente.")
-    
-            # Mostrar instrucciones de cómo copiar la ruta
-            with st.expander("💡 ¿Cómo copiar la ruta del archivo?"):
+            if is_cloud:
+                # ===== MODO CLOUD: ZIP UPLOAD =====
                 st.markdown("""
-                **Opción A: Desde el Explorador de Windows**
-                1. Abre el Explorador de Windows
-                2. Navega hasta la carpeta que contiene tu archivo `.pbip`
-                3. **SHIFT + Click derecho** en el archivo `.pbip` → **Copiar como ruta de acceso**
-                4. Pega la ruta arriba ✅ **(se copiará con comillas, la app las procesa automáticamente)**
-    
-                **Opción B: Desde la barra de direcciones**
-                1. Abre el Explorador de Windows
-                2. Navega hasta la carpeta que contiene tu archivo `.pbip`
-                3. Click en la barra de direcciones arriba → Copiar
-                4. Pega la ruta arriba y agrega `\\NombreDeArchivo.pbip` al final
-    
-                **Ejemplo de ruta válida:**
-                ```
-                C:\\Users\\TuUsuario\\Documentos\\MiProyecto\\Reporte.pbip
-                ```
-                O con comillas:
-                ```
-                "C:\\Users\\TuUsuario\\Documentos\\MiProyecto\\Reporte.pbip"
-                ```
+                **📦 Sube tu proyecto PBIP comprimido (ZIP)**
+
+                1. 📂 Localiza tu proyecto PBIP en Windows
+                2. 🗜️ **Comprime** el archivo `.pbip` y las 2 carpetas en un ZIP
+                3. ⬆️ **Sube el archivo ZIP** usando el botón de abajo
+
+                **Nota:** El ZIP debe contener el `.pbip` y las carpetas en la raíz.
                 """)
-    
-            # Opción 2: Archivo ZIP (alternativa)
-            st.markdown("**Opción 2: Subir archivo ZIP** (Alternativa)")
-            uploaded_file = st.file_uploader(
-                "O selecciona un archivo .zip si comprimiste el PBIP",
-                type=['zip'],
-                help="Si comprimiste todas las carpetas PBIP en un archivo ZIP, súbelo aquí"
-            )
-    
-        return pbip_folder_path, uploaded_file
+
+                uploaded_file = st.file_uploader(
+                    "Selecciona el archivo ZIP con tu proyecto PBIP:",
+                    type=['zip'],
+                    help="Archivo ZIP conteniendo: archivo.pbip y carpeta .SemanticModel",
+                    key="dax_zip_uploader"
+                )
+
+                return None, uploaded_file
+
+            else:
+                # ===== MODO LOCAL: FILE PATH INPUT =====
+                st.info("""
+                **ℹ️ Estructura de archivos PBIP:**
+
+                Cuando guardas un archivo como PBIP en Power BI Desktop, se generan:
+                - 📄 Un archivo `.pbip` (archivo de configuración JSON)
+                - 📁 Una carpeta `.SemanticModel` (contiene el modelo de datos)
+                - 📁 Una carpeta `.Report` (contiene el reporte)
+
+                **Puedes pegar la ruta a cualquiera de estos:**
+                1. La ruta al archivo `.pbip` (Ejemplo: `C:\\Users\\...\\MiReporte.pbip`)
+                2. La ruta a la carpeta `.SemanticModel` (Ejemplo: `C:\\Users\\...\\MiReporte.SemanticModel`)
+                3. La ruta a la carpeta padre que contiene todo
+                """)
+
+                pbip_folder_path = st.text_input(
+                    "Pega la ruta completa al archivo .pbip o a la carpeta .SemanticModel",
+                    placeholder=r"C:\Users\...\MiReporte.pbip",
+                    help="Copia y pega la ruta completa al archivo .pbip. ✅ Puedes pegar la ruta CON comillas, la aplicación las detecta automáticamente."
+                )
+
+                # Mostrar instrucciones de cómo copiar la ruta
+                with st.expander("💡 ¿Cómo copiar la ruta del archivo?"):
+                    st.markdown("""
+                    **Opción A: Desde el Explorador de Windows**
+                    1. Abre el Explorador de Windows
+                    2. Navega hasta la carpeta que contiene tu archivo `.pbip`
+                    3. **SHIFT + Click derecho** en el archivo `.pbip` → **Copiar como ruta de acceso**
+                    4. Pega la ruta arriba ✅ **(se copiará con comillas, la app las procesa automáticamente)**
+
+                    **Opción B: Desde la barra de direcciones**
+                    1. Abre el Explorador de Windows
+                    2. Navega hasta la carpeta que contiene tu archivo `.pbip`
+                    3. Click en la barra de direcciones arriba → Copiar
+                    4. Pega la ruta arriba y agrega `\\NombreDeArchivo.pbip` al final
+                    """)
+
+                return pbip_folder_path, None
     
     
     def export_measures_to_csv(ranked_measures):
@@ -940,97 +1004,10 @@ def render_app(logger):
     
     def main():
         """Función principal de la aplicación"""
-    
+
         # Render header
         render_header()
-    
-        # Sidebar con diseño mejorado
-        with st.sidebar:
-            # Logo/título del sidebar
-            st.markdown("""
-            <div style="text-align: center; padding: 10px;">
-                <h2 style="color: #0451E4; margin-bottom: 5px;">⚡ DAX Optimizer</h2>
-                <p style="color: #6c757d; font-size: 0.9rem; margin-top: -5px;">v1.1</p>
-            </div>
-            """, unsafe_allow_html=True)
-    
-            st.markdown("---")
-    
-            # Características con iconos mejorados
-            with st.expander("✨ Características principales", expanded=True):
-                st.markdown("""
-                - 📂 **Análisis completo de archivos PBIP**
-                  Procesa todo tu modelo de datos en segundos
-    
-                - 🔍 **Detección inteligente de problemas**
-                  Identifica issues críticos de performance
-    
-                - 📊 **Sistema de scoring con tolerancia**
-                  Evalúa el riesgo de cada medida DAX
-    
-                - 💡 **Sugerencias de optimización**
-                  Recomendaciones específicas y accionables
-    
-                - 📈 **Visualización de influencia**
-                  Gráficos interactivos para análisis rápido
-                """)
-    
-            st.markdown("---")
-    
-            # Guía rápida
-            with st.expander("🚀 Guía rápida"):
-                st.markdown("""
-                **Paso 1:** Copia la ruta de tu archivo `.pbip`
-    
-                **Paso 2:** Pégala en el campo de entrada (con o sin comillas)
-    
-                **Paso 3:** Ajusta la tolerancia de riesgo según tus necesidades
-    
-                **Paso 4:** Explora las medidas con mayor riesgo
-    
-                **Paso 5:** Exporta los resultados para compartir
-                """)
-    
-            st.markdown("---")
-    
-            # Desarrollador con diseño mejorado
-            st.markdown("""
-            <div class="developer-badge">
-                <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">Desarrollado por</p>
-                <h3 style="margin: 5px 0; font-size: 1.3rem;">Adrián Javier Messina</h3>
-                <p style="margin: 5px 0; font-size: 1rem; font-weight: 600;">Torre Visualización</p>
-                <p style="margin: 5px 0; font-size: 0.8rem; opacity: 0.8;">📅 Enero 2026</p>
-            </div>
-            """, unsafe_allow_html=True)
-    
-            st.markdown("---")
-    
-            # Recursos útiles
-            with st.expander("📚 Recursos y documentación"):
-                st.markdown("""
-                **Patrones DAX:**
-                - [SQLBI - DAX Patterns](https://www.sqlbi.com/patterns/)
-                - [DAX Guide](https://dax.guide/)
-    
-                **Power BI:**
-                - [Best Practices](https://docs.microsoft.com/power-bi/)
-                - [Performance Tuning](https://docs.microsoft.com/power-bi/guidance/power-bi-optimization)
-    
-                **Comunidad:**
-                - [Power BI Community](https://community.powerbi.com/)
-                """)
-    
-            st.markdown("---")
-    
-            # Versión
-            st.markdown("""
-            <div style="text-align: center; padding: 10px; background: #f8f9fa; border-radius: 8px;">
-                <p style="margin: 0; font-size: 0.85rem; color: #6c757d;">Versión</p>
-                <code style="font-size: 1rem; color: #0451E4; font-weight: 600;">v1.1.2</code>
-                <p style="margin: 5px 0 0 0; font-size: 0.75rem; color: #6B7280;">Build 2026.02.03</p>
-            </div>
-            """, unsafe_allow_html=True)
-    
+
         # Upload de archivo o ruta de carpeta
         pbip_folder_path, uploaded_file = render_file_upload()
     
@@ -1054,11 +1031,12 @@ def render_app(logger):
                 st.error(f"⚠️ La ruta '{pbip_path}' no existe. Verifica que la ruta sea correcta.")
     
         elif uploaded_file is not None:
-            # Opción 2: Archivo subido
-            temp_file_path = os.path.join(os.getcwd(), uploaded_file.name)
-            with open(temp_file_path, 'wb') as f:
-                f.write(uploaded_file.getbuffer())
-            file_to_analyze = temp_file_path
+            # Opción 2: Archivo ZIP subido
+            with st.spinner("📦 Extrayendo proyecto PBIP..."):
+                file_to_analyze = extract_pbip_from_zip(uploaded_file)
+
+            if file_to_analyze:
+                st.success(f"✅ Proyecto extraído correctamente: `{Path(file_to_analyze).name}`")
     
         if file_to_analyze:
             try:
