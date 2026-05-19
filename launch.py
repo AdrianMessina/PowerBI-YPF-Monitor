@@ -7,9 +7,9 @@ subprocess.run([
     "-q", "-r", "requirements.txt"
 ], check=True)
 
-print("Starting Streamlit on port 8080...")
+print("Starting Streamlit on port 8100...")
 subprocess.run([
     "streamlit", "run", "main.py",
-    "--server.port", "8080",
+    "--server.port", "8100",
     "--server.address", "0.0.0.0"
 ])
