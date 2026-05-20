@@ -67,6 +67,59 @@ class UsageLogger:
         """Log session end"""
         self.log_event('session_ended', {})
 
+    def log_file_analyzed(self, filename: str, file_size_mb: float = 0,
+                          file_type: str = 'pbip', analysis_duration_seconds: float = 0,
+                          score=None, recommendations_count: int = 0):
+        """Compat method - delegates to log_event"""
+        self.log_event('file_analyzed', {
+            'filename': filename,
+            'file_size_mb': file_size_mb,
+            'file_type': file_type,
+            'duration_seconds': analysis_duration_seconds,
+            'score': score,
+            'recommendations_count': recommendations_count
+        })
+
+    def log_dax_measures_analyzed(self, measures_count: int = 0, critical_count: int = 0,
+                                   high_count: int = 0, medium_count: int = 0, low_count: int = 0,
+                                   filename: str = None, avg_risk_score: float = None):
+        """Compat method - delegates to log_event"""
+        self.log_event('dax_analysis_completed', {
+            'filename': filename,
+            'measures_count': measures_count,
+            'critical_count': critical_count,
+            'high_count': high_count,
+            'medium_count': medium_count,
+            'low_count': low_count,
+            'score': avg_risk_score
+        })
+
+    def get_all_events(self) -> list:
+        """
+        Read all logged events from all daily log files
+
+        Returns:
+            List of event dictionaries
+        """
+        events = []
+        if not self.logs_dir.exists():
+            return events
+
+        for log_file in sorted(self.logs_dir.glob("usage_*.jsonl")):
+            try:
+                with open(log_file, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line:
+                            try:
+                                events.append(json.loads(line))
+                            except json.JSONDecodeError:
+                                continue
+            except Exception:
+                continue
+
+        return events
+
 
 def get_logger() -> UsageLogger:
     """
