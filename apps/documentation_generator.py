@@ -8,71 +8,9 @@ import sys
 import logging
 from pathlib import Path
 from datetime import datetime
-import zipfile
-import shutil
-import os
 
 # Initialize logger
 logger = logging.getLogger(__name__)
-
-
-def extract_pbip_from_zip(uploaded_file, extract_to="/home/cdsw/pbip_projects"):
-    """
-    Extrae un archivo ZIP con estructura PBIP y retorna la ruta al archivo .pbip
-
-    Args:
-        uploaded_file: UploadedFile de Streamlit
-        extract_to: Directorio donde extraer (default: /home/cdsw/pbip_projects)
-
-    Returns:
-        str: Ruta al archivo .pbip encontrado, o None si hay error
-    """
-    try:
-        # Crear directorio si no existe
-        os.makedirs(extract_to, exist_ok=True)
-
-        # Nombre del proyecto (sin extensión .zip)
-        project_name = Path(uploaded_file.name).stem
-        project_path = Path(extract_to) / project_name
-
-        # Si ya existe, eliminar para evitar conflictos
-        if project_path.exists():
-            shutil.rmtree(project_path)
-
-        # Crear carpeta del proyecto
-        project_path.mkdir(parents=True, exist_ok=True)
-
-        # Extraer ZIP
-        with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
-            zip_ref.extractall(project_path)
-
-        # Buscar archivo .pbip
-        pbip_files = list(project_path.glob("**/*.pbip"))
-
-        if not pbip_files:
-            st.error(f"❌ No se encontró archivo .pbip dentro del ZIP")
-            return None
-
-        if len(pbip_files) > 1:
-            st.warning(f"⚠️ Se encontraron {len(pbip_files)} archivos .pbip. Usando el primero: {pbip_files[0].name}")
-
-        pbip_path = str(pbip_files[0])
-
-        # Verificar que existan las carpetas necesarias
-        pbip_dir = pbip_files[0].parent
-        semantic_dir = pbip_dir / f"{pbip_files[0].stem}.SemanticModel"
-
-        if not semantic_dir.exists():
-            st.warning(f"⚠️ Carpeta .SemanticModel faltante. El análisis puede ser incompleto.")
-
-        return pbip_path
-
-    except zipfile.BadZipFile:
-        st.error("❌ El archivo no es un ZIP válido")
-        return None
-    except Exception as e:
-        st.error(f"❌ Error al extraer ZIP: {str(e)}")
-        return None
 
 
 def render_app(logger_suite):
@@ -99,6 +37,7 @@ def render_app(logger_suite):
 
     # Import shared styles
     from apps_core.layout_core.shared_styles import render_app_header, render_footer
+    from apps_core.layout_core.docgen_showcase import render_docgen_showcase
 
     # Header
     render_app_header(
@@ -106,112 +45,114 @@ def render_app(logger_suite):
         "Generación automática de documentación técnica-funcional",
         "4.0"
     )
-    
+
+    # Showcase - what gets documented
+    render_docgen_showcase()
+
+    # Examples in expander
+    with st.expander("👁️ Ver ejemplos de documentación generada", expanded=False):
+        st.markdown("**Así se ve la documentación que genera automáticamente:**")
+
+        example_titles = [
+            "📄 Portada Corporativa",
+            "🗂️ Tablas y Columnas",
+            "📊 Medidas DAX",
+            "🔗 Diagrama de Relaciones",
+            "📈 Análisis de Visualizaciones"
+        ]
+
+        for i, title in enumerate(example_titles, 1):
+            img_path = project_root / "assets" / f"docgen_example_{i}.jpg"
+            if img_path.exists():
+                st.markdown(f"**{title}**")
+                st.image(str(img_path), use_container_width=True)
+                if i < 5:
+                    st.markdown("---")
+
+    st.markdown("---")
+
     # PBIP File Selection
     st.markdown("### Archivo PBIP")
+    
+    # Try auto-detect first
+    pbip_folder = project_root / "PBI test"
+    pbip_files = []
+    if pbip_folder.exists():
+        pbip_files = [f for f in pbip_folder.glob("*.pbip") if f.is_file()]
+    
+    # Set default path if found
+    if pbip_files:
+        pbip_file_path = pbip_files[0]
+        default_path = str(pbip_file_path.resolve())
+        st.success(f"✅ Archivo detectado: **{pbip_file_path.name}**")
+        st.info(f"📂 Ruta completa: `{default_path}`")
+    else:
+        default_path = ""
+    
+    # Always show text input (editable)
+    manual_path_input = st.text_input(
+        "Ruta del archivo PBIP (editable)",
+        value=default_path,
+        placeholder=r"C:\ruta\completa\al\archivo.pbip",
+        help="Pega la ruta completa del archivo .pbip (se detectan y eliminan comillas automáticamente)"
+    )
 
-    # Detectar entorno
-    is_cloud = os.getenv('DEPLOYMENT_ENV') == 'production'
-    pbip_path = None
-    manual_path_input = None
+    # Warning about file naming consistency
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.02) 100%);
+                border-left: 3px solid #F59E0B; padding: 0.6rem 1rem; border-radius: 0 6px 6px 0;
+                margin: 0.5rem 0; font-size: 0.85rem; color: #78350F;">
+        ⚠️ <strong>Mantén el mismo nombre del archivo</strong> para que el Usage Dashboard pueda rastrear las mejoras a lo largo del tiempo.
+    </div>
+    """, unsafe_allow_html=True)
 
-    if is_cloud:
-        # ===== MODO CLOUD: ZIP UPLOAD =====
+    # Instructions on how to copy path
+    with st.expander("💡 ¿Cómo copiar la ruta del archivo?"):
         st.markdown("""
-        **📦 Sube tu proyecto PBIP comprimido (ZIP)**
+        **Opción A: Desde el Explorador de Windows**
+        1. Abre el Explorador de Windows
+        2. Navega hasta la carpeta que contiene tu archivo `.pbip`
+        3. **SHIFT + Click derecho** en el archivo `.pbip` → **Copiar como ruta de acceso**
+        4. Pega la ruta arriba ✅ **(se copiará con comillas, la app las procesa automáticamente)**
 
-        1. 📂 Localiza tu proyecto PBIP en Windows
-        2. 🗜️ **Comprime** el archivo `.pbip` y las 2 carpetas en un ZIP
-        3. ⬆️ **Sube el archivo ZIP** usando el botón de abajo
+        **Opción B: Desde la barra de direcciones**
+        1. Abre el Explorador de Windows
+        2. Navega hasta la carpeta que contiene tu archivo `.pbip`
+        3. Click en la barra de direcciones arriba → Copiar
+        4. Pega la ruta arriba y agrega `\\NombreDeArchivo.pbip` al final
+
+        **Ejemplo de ruta válida:**
+        ```
+        C:\\Users\\TuUsuario\\Documentos\\MiProyecto\\Reporte.pbip
+        ```
+        O con comillas:
+        ```
+        "C:\\Users\\TuUsuario\\Documentos\\MiProyecto\\Reporte.pbip"
+        ```
+
+        **Estructura PBIP esperada:**
+        - Archivo principal: `reporte.pbip`
+        - Carpeta asociada: `reporte.SemanticModel/` (modelo de datos)
+        - Carpeta asociada: `reporte.Report/` (visualizaciones)
         """)
 
-        uploaded_file = st.file_uploader(
-            "Selecciona el archivo ZIP con tu proyecto PBIP:",
-            type=['zip'],
-            help="Archivo ZIP conteniendo: archivo.pbip, carpeta .SemanticModel y carpeta .Report",
-            key="docgen_zip_uploader"
-        )
-
-        if uploaded_file is not None:
-            with st.spinner("📦 Extrayendo proyecto PBIP..."):
-                pbip_path_str = extract_pbip_from_zip(uploaded_file)
-
-            if pbip_path_str:
-                pbip_path = Path(pbip_path_str)
-                st.success(f"✅ Proyecto extraído correctamente: `{pbip_path.name}`")
-
-    else:
-        # ===== MODO LOCAL: FILE PATH INPUT =====
-        # Try auto-detect first
-        pbip_folder = project_root / "PBI test"
-        pbip_files = []
-        if pbip_folder.exists():
-            pbip_files = [f for f in pbip_folder.glob("*.pbip") if f.is_file()]
-
-        # Set default path if found
-        if pbip_files:
-            pbip_file_path = pbip_files[0]
-            default_path = str(pbip_file_path.resolve())
-            st.success(f"✅ Archivo detectado: **{pbip_file_path.name}**")
-            st.info(f"📂 Ruta completa: `{default_path}`")
-        else:
-            default_path = ""
-
-        # Always show text input (editable)
-        manual_path_input = st.text_input(
-            "Ruta del archivo PBIP (editable)",
-            value=default_path,
-            placeholder=r"C:\ruta\completa\al\archivo.pbip",
-            help="Pega la ruta completa del archivo .pbip (se detectan y eliminan comillas automáticamente)"
-        )
-
-    # Instructions on how to copy path (solo en modo local)
-    if not is_cloud:
-        with st.expander("💡 ¿Cómo copiar la ruta del archivo?"):
-            st.markdown("""
-            **Opción A: Desde el Explorador de Windows**
-            1. Abre el Explorador de Windows
-            2. Navega hasta la carpeta que contiene tu archivo `.pbip`
-            3. **SHIFT + Click derecho** en el archivo `.pbip` → **Copiar como ruta de acceso**
-            4. Pega la ruta arriba ✅ **(se copiará con comillas, la app las procesa automáticamente)**
-
-            **Opción B: Desde la barra de direcciones**
-            1. Abre el Explorador de Windows
-            2. Navega hasta la carpeta que contiene tu archivo `.pbip`
-            3. Click en la barra de direcciones arriba → Copiar
-            4. Pega la ruta arriba y agrega `\\NombreDeArchivo.pbip` al final
-
-            **Ejemplo de ruta válida:**
-            ```
-            C:\\Users\\TuUsuario\\Documentos\\MiProyecto\\Reporte.pbip
-            ```
-            """)
-
-    # Procesar input según modo
-    if not is_cloud and manual_path_input:
-        # Modo local: procesar ruta manual
+    if manual_path_input:
+        # Clean path (remove quotes if present)
         clean_path = manual_path_input.strip().strip('"').strip("'")
         pbip_path = Path(clean_path)
-
+    
         if not pbip_path.exists():
             st.error(f"❌ El archivo no existe: `{pbip_path}`")
             st.warning("Verifica que la ruta sea correcta y el archivo exista")
             st.stop()
-
+    
         if pbip_path.suffix.lower() != '.pbip':
             st.error(f"❌ El archivo debe tener extensión .pbip (encontrado: `{pbip_path.suffix}`)")
             st.stop()
-
-    elif not is_cloud and not manual_path_input:
-        # Modo local sin input
+    else:
         st.warning("⚠️ Por favor especifica la ruta del archivo .pbip")
-        if 'pbip_folder' in locals() and pbip_folder.exists():
+        if pbip_folder.exists():
             st.info(f"💡 Coloca tu archivo .pbip en: `{pbip_folder.resolve()}`")
-        st.stop()
-
-    elif is_cloud and not pbip_path:
-        # Modo cloud sin archivo
-        st.info("⬆️ Sube un archivo ZIP con tu proyecto PBIP para continuar")
         st.stop()
     
     st.markdown("---")
@@ -400,34 +341,7 @@ def render_app(logger_suite):
             frecuencia_flujo = "No especificada"
     
         st.markdown("---")
-
-        # SECTION 5: Sections to include
-        st.markdown('<div class="section-header">📑 SECCIONES A DOCUMENTAR</div>', unsafe_allow_html=True)
-        st.caption("Selecciona las secciones que deseas incluir en el documento. Por defecto se generan todas.")
-
-        all_sections = {
-            "portada": "Portada y Versión",
-            "objetivo": "Objetivo y Alcance",
-            "usuarios": "Usuarios y Destinatarios",
-            "definiciones": "Definiciones (KPIs / Medidas DAX)",
-            "origenes": "Orígenes de Datos (Power Query M)",
-            "filtros": "Filtros del Reporte",
-            "modelo_er": "Modelo de Relaciones (ER)",
-            "visualizaciones": "Visualizaciones del Reporte",
-            "rls": "Seguridad (RLS)",
-            "anexo": "Anexo Técnico",
-        }
-
-        selected_sections = []
-        col1, col2 = st.columns(2)
-        section_items = list(all_sections.items())
-        for i, (key, label) in enumerate(section_items):
-            with col1 if i % 2 == 0 else col2:
-                if st.checkbox(label, value=True, key=f"sec_{key}"):
-                    selected_sections.append(key)
-
-        st.markdown("---")
-
+    
         # Generate button
         generate = st.form_submit_button(
             "🚀 GENERAR DOCUMENTO WORD",
@@ -544,14 +458,13 @@ def render_app(logger_suite):
             }
     
             # Find template - Buscar en múltiples ubicaciones
-            template_name = "Plantilla Documentacion Técnica Funcional Power Bi.docx"
             template_locations = [
-                # Ubicación principal: dentro del proyecto
-                project_root / "templates" / "docgen" / template_name,
+                # Ubicación principal: dentro del proyecto (funciona para todos los usuarios)
+                project_root / "templates" / "docgen" / "plantilla_corporativa_ypf.docx",
                 # Fallback: directamente en templates
-                project_root / "templates" / template_name,
+                project_root / "templates" / "plantilla_corporativa_ypf.docx",
                 # Fallback: carpeta padre del proyecto
-                project_root.parent / template_name,
+                project_root.parent / "Plantilla Documentacion Técnica Funcional Power Bi.docx",
             ]
 
             template_path = None
@@ -562,7 +475,7 @@ def render_app(logger_suite):
 
             if not template_path:
                 st.error("Template no encontrado. Verifica que exista:")
-                st.code(f"templates/docgen/{template_name}")
+                st.code("templates/docgen/plantilla_corporativa_ypf.docx")
                 st.info("Descarga el template desde el repositorio de GitHub y colocalo en la carpeta 'templates/docgen/'")
                 st.stop()
     
@@ -578,8 +491,7 @@ def render_app(logger_suite):
                 er_diagram_path=er_diagram_path,
                 er_image_path=er_image_path,
                 visualization_images=viz_image_paths,
-                progress_callback=progress_callback,
-                sections=selected_sections
+                progress_callback=progress_callback
             )
     
             progress.progress(100)

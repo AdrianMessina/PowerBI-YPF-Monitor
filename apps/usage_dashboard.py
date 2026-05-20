@@ -1,161 +1,127 @@
 """
 Usage Dashboard - Metricas de Uso de YPF BI Monitor
-Herramienta interna con acceso restringido por email corporativo
+Herramienta interna con acceso restringido
 """
 
 import streamlit as st
 import pandas as pd
-import json
-import os
-from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 import plotly.express as px
 import plotly.graph_objects as go
 
 from apps_core.layout_core.shared_styles import render_app_header, render_footer
+from shared.auth import Authenticator
 
 
-# Authorized users whitelist (emails or Windows usernames)
-AUTHORIZED_USERS = [
-    "se43617",
-    "se46958",
-    "nicolas.ursino",
-    "se42998",
-    "se41714",
-    "se48659",
-    "se48762",
-]
+def detect_app(event_name):
+    """Map event name to app name"""
+    if 'pbi_analysis' in event_name or 'powerbi_analyzer' in event_name:
+        return 'Power BI Analyzer'
+    elif 'docgen' in event_name:
+        return 'Documentation Generator'
+    elif 'layout' in event_name:
+        return 'Layout Organizer'
+    elif 'dax' in event_name:
+        return 'DAX Optimizer'
+    elif 'bot' in event_name or 'bi_bot' in event_name:
+        return 'BI Bot'
+    elif 'session' in event_name:
+        return 'Sistema'
+    else:
+        return 'Otro'
 
 
-def _get_current_user() -> str:
-    """Get current Windows username (lowercase for comparison)."""
-    return os.environ.get('USERNAME', os.environ.get('USER', '')).lower()
-
-
-def _check_admin_access() -> bool:
-    """
-    Verify admin access via email whitelist or manual login.
-    Returns True if authenticated, False otherwise.
-    """
-    # Check if already authenticated in this session
-    if st.session_state.get('admin_authenticated', False):
-        return True
-
-    # Auto-authenticate if Windows username matches whitelist
-    current_user = _get_current_user()
-    if current_user in AUTHORIZED_USERS:
-        st.session_state.admin_authenticated = True
-        st.session_state.admin_user = current_user
-        return True
-
-    # Manual login for users not auto-detected
-    st.markdown("""
-    <div style="max-width: 450px; margin: 2rem auto; padding: 2rem;
-                background: #f8f9fa; border-radius: 10px;
-                border: 1px solid #E2E8F0; text-align: center;">
-        <h3 style="color: #1E293B; margin-bottom: 0.5rem;
-                   font-family: 'Fira Sans', sans-serif;">Acceso Restringido</h3>
-        <p style="color: #666; font-size: 0.9rem; font-family: 'Fira Sans', sans-serif;">
-            Esta herramienta es solo para usuarios autorizados.<br>
-            Ingresa tu email corporativo para verificar acceso.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns([1, 1.5, 1])
-    with col2:
-        email_input = st.text_input(
-            "Email corporativo",
-            key="admin_email_input",
-            placeholder="seXXXXX@grupo.ypf.com"
-        )
-
-        if st.button("Verificar acceso", use_container_width=True, key="admin_login_btn"):
-            if email_input:
-                # Extract username from email (e.g. "se46958" from "se46958@grupo.ypf.com")
-                email_user = email_input.strip().lower().split('@')[0]
-                if email_user in AUTHORIZED_USERS:
-                    st.session_state.admin_authenticated = True
-                    st.session_state.admin_user = email_user
-                    st.rerun()
-                else:
-                    st.error("Tu email no tiene acceso a esta herramienta.")
-            else:
-                st.warning("Ingresa tu email corporativo.")
-
-    return False
+def extract_data_field(data, field):
+    """Safely extract a field from event data dict"""
+    if isinstance(data, dict):
+        return data.get(field)
+    return None
 
 
 def render_app(logger):
     """
-    Render usage dashboard (admin only)
+    Render usage dashboard
 
     Args:
         logger: Logger de la suite para tracking de uso
     """
+    # CSS for improved layout
+    st.markdown("""
+    <style>
+    .stDataFrame {
+        width: 100% !important;
+    }
+    .stDataFrame table {
+        width: 100% !important;
+        table-layout: auto !important;
+    }
+    .stDataFrame td, .stDataFrame th {
+        white-space: nowrap !important;
+        padding: 0.6rem 1rem !important;
+        font-size: 0.88rem !important;
+    }
+    .stDataFrame th {
+        background: linear-gradient(135deg, #0451E4 0%, #033fa8 100%) !important;
+        color: white !important;
+        font-weight: 600 !important;
+    }
+    .dashboard-warning {
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.04) 100%);
+        border-left: 4px solid #F59E0B;
+        padding: 1rem 1.5rem;
+        border-radius: 0 8px 8px 0;
+        margin: 1rem 0;
+        font-size: 0.92rem;
+        color: #78350F;
+    }
+    .filter-section {
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        padding: 1.25rem 1.5rem;
+        margin: 1rem 0;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     render_app_header(
         "Usage Dashboard",
-        "Metricas y estadisticas de uso de YPF BI Monitor",
-        "1.0"
+        "Metricas y comparativa antes/despues de YPF BI Monitor",
+        "1.1"
     )
 
-    # Admin authentication gate
-    if not _check_admin_access():
+    # Require authentication
+    auth = Authenticator()
+    if not auth.require_auth(admin_only=False):
         render_footer()
         return
 
-    # Show logged-in user and logout option
-    admin_user = st.session_state.get('admin_user', _get_current_user())
-    col1, col2, col3 = st.columns([4, 2, 1])
-    with col2:
-        st.markdown(f"<p style='color: #666; font-size: 0.85rem; padding-top: 0.5rem; text-align: right;'>"
-                    f"Usuario: <strong>{admin_user}</strong></p>", unsafe_allow_html=True)
-    with col3:
-        if st.button("Cerrar sesion", key="admin_logout"):
-            st.session_state.admin_authenticated = False
-            st.session_state.pop('admin_user', None)
-            st.rerun()
+    auth.render_user_info()
 
-    # Find log files
-    logs_dir = Path(__file__).parent.parent / "logs"
+    # Warning about file naming
+    st.markdown("""
+    <div class="dashboard-warning">
+        ⚠️ <strong>Importante:</strong> No cambies el nombre de tus archivos .pbip entre analisis.
+        Las comparativas antes/despues se basan en el nombre del archivo. Si cambias el nombre,
+        el sistema lo tratara como un reporte diferente y no podras ver la evolucion de tus mejoras.
+    </div>
+    """, unsafe_allow_html=True)
 
-    if not logs_dir.exists():
-        st.warning("No se encontraron logs de uso todavia.")
-        st.info("Los logs se crearan automaticamente cuando uses las aplicaciones.")
-        render_footer()
-        return
+    # Get events
+    all_events = logger.get_all_events()
 
-    log_files = list(logs_dir.glob("usage_*.jsonl"))
-
-    if not log_files:
+    if not all_events:
         st.warning("No hay datos de uso disponibles todavia.")
         st.info("Usa las aplicaciones y luego regresa aqui para ver las estadisticas.")
         render_footer()
         return
 
-    # Read all logs
-    all_events = []
-    for log_file in log_files:
-        try:
-            with open(log_file, 'r', encoding='utf-8') as f:
-                for line in f:
-                    if line.strip():
-                        event = json.loads(line)
-                        all_events.append(event)
-        except Exception as e:
-            st.error(f"Error leyendo {log_file.name}: {e}")
-
-    if not all_events:
-        st.warning("No se pudieron leer los eventos de uso.")
-        render_footer()
-        return
-
-    # Convert to DataFrame
+    # Build DataFrame
     df = pd.DataFrame(all_events)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     df['date'] = df['timestamp'].dt.date
 
-    # Ensure username/hostname columns exist and fill NaN (backward compat with old logs)
+    # Ensure columns
     if 'username' not in df.columns:
         df['username'] = 'unknown'
     else:
@@ -165,185 +131,280 @@ def render_app(logger):
     else:
         df['hostname'] = df['hostname'].fillna('unknown').astype(str)
 
-    # Main metrics
-    st.markdown("### Resumen General")
+    # Add app classification
+    df['app'] = df['event'].apply(detect_app)
+
+    # Extract score and filename from data field
+    df['score'] = df['data'].apply(lambda x: extract_data_field(x, 'score'))
+    df['filename'] = df['data'].apply(lambda x: extract_data_field(x, 'filename') or extract_data_field(x, 'pbip_file'))
+
+    # ============================================================
+    # FILTERS SECTION
+    # ============================================================
+    st.markdown("### 🔍 Filtros")
+
+    with st.container():
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            all_users = sorted(df['username'].unique().tolist())
+            selected_user = st.selectbox(
+                "Usuario",
+                options=['Todos'] + all_users,
+                key="filter_user"
+            )
+
+        with col2:
+            all_apps = sorted([a for a in df['app'].unique().tolist() if a != 'Sistema'])
+            selected_app = st.selectbox(
+                "Aplicacion",
+                options=['Todas'] + all_apps,
+                key="filter_app"
+            )
+
+        with col3:
+            min_date = df['timestamp'].min().date()
+            max_date = df['timestamp'].max().date()
+            date_from = st.date_input(
+                "Desde",
+                value=min_date,
+                min_value=min_date,
+                max_value=max_date,
+                key="filter_date_from"
+            )
+
+        with col4:
+            date_to = st.date_input(
+                "Hasta",
+                value=max_date,
+                min_value=min_date,
+                max_value=max_date,
+                key="filter_date_to"
+            )
+
+    # Apply filters
+    df_filtered = df.copy()
+    if selected_user != 'Todos':
+        df_filtered = df_filtered[df_filtered['username'] == selected_user]
+    if selected_app != 'Todas':
+        df_filtered = df_filtered[df_filtered['app'] == selected_app]
+    df_filtered = df_filtered[
+        (df_filtered['date'] >= date_from) &
+        (df_filtered['date'] <= date_to)
+    ]
+
+    st.markdown("---")
+
+    # ============================================================
+    # GENERAL METRICS
+    # ============================================================
+    st.markdown("### 📊 Resumen General")
 
     col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
-        total_events = len(df)
-        st.metric("Total Eventos", f"{total_events:,}")
-
+        st.metric("Total Eventos", f"{len(df_filtered):,}")
     with col2:
-        unique_sessions = df['session_id'].nunique()
-        st.metric("Sesiones Unicas", f"{unique_sessions:,}")
-
+        st.metric("Sesiones", f"{df_filtered['session_id'].nunique():,}")
     with col3:
-        unique_users = df['username'].nunique()
-        st.metric("Usuarios Unicos", f"{unique_users:,}")
-
+        st.metric("Usuarios", f"{df_filtered['username'].nunique():,}")
     with col4:
-        date_range = (df['timestamp'].max() - df['timestamp'].min()).days + 1
-        st.metric("Dias con Datos", f"{date_range}")
-
+        analyses_count = len(df_filtered[df_filtered['score'].notna()])
+        st.metric("Analisis con Score", f"{analyses_count:,}")
     with col5:
-        events_per_day = total_events / date_range if date_range > 0 else 0
-        st.metric("Eventos/Dia (Prom)", f"{events_per_day:.1f}")
+        avg_score = df_filtered['score'].mean()
+        st.metric("Score Promedio", f"{avg_score:.1f}" if pd.notna(avg_score) else "N/A")
 
     st.markdown("---")
 
-    # Events by type
-    st.markdown("### Eventos por Tipo")
+    # ============================================================
+    # ANALYSIS WITH SCORES (Before/After comparison)
+    # ============================================================
+    st.markdown("### 🎯 Analisis con Metricas (Comparativa Antes/Despues)")
 
-    event_counts = df['event'].value_counts().reset_index()
-    event_counts.columns = ['Evento', 'Cantidad']
+    analyses_df = df_filtered[df_filtered['score'].notna()].copy()
 
-    col1, col2 = st.columns([1, 2])
+    if not analyses_df.empty:
+        # Build comparison table per file
+        analyses_df['Fecha'] = analyses_df['timestamp'].dt.strftime('%Y-%m-%d %H:%M')
+        analyses_df = analyses_df.sort_values('timestamp')
 
-    with col1:
-        st.dataframe(event_counts, use_container_width=True, hide_index=True)
+        # Add iteration number per file
+        analyses_df['Iteracion'] = analyses_df.groupby(['username', 'filename']).cumcount() + 1
 
-    with col2:
-        fig = px.bar(event_counts, x='Cantidad', y='Evento',
-                     orientation='h',
-                     title='Distribucion de Eventos',
-                     color='Cantidad',
-                     color_continuous_scale=['#E6E6E6', '#0451E4'])
-        fig.update_layout(height=400)
-        st.plotly_chart(fig, use_container_width=True)
+        # Display table
+        display_cols = ['Fecha', 'username', 'app', 'filename', 'Iteracion', 'score']
+        display_df = analyses_df[display_cols].copy()
+        display_df.columns = ['Fecha', 'Usuario', 'App', 'Archivo', 'Iteracion', 'Score']
+        display_df = display_df.sort_values('Fecha', ascending=False)
+
+        st.dataframe(display_df, use_container_width=True, hide_index=True, height=350)
+
+        # Before/After chart - evolution per file
+        files_with_multiple = analyses_df.groupby(['username', 'filename']).size()
+        files_with_multiple = files_with_multiple[files_with_multiple >= 2].reset_index()
+
+        if not files_with_multiple.empty:
+            st.markdown("#### 📈 Evolucion del Score por Archivo")
+            st.caption("Solo se muestran archivos analizados al menos 2 veces")
+
+            evolution_df = analyses_df.merge(
+                files_with_multiple[['username', 'filename']],
+                on=['username', 'filename'],
+                how='inner'
+            )
+            evolution_df['etiqueta'] = evolution_df['username'] + ' - ' + evolution_df['filename'].fillna('sin_nombre')
+
+            fig = px.line(
+                evolution_df,
+                x='timestamp',
+                y='score',
+                color='etiqueta',
+                markers=True,
+                title='Evolucion del Score - Antes vs Despues',
+                labels={'timestamp': 'Fecha', 'score': 'Score', 'etiqueta': 'Usuario - Archivo'}
+            )
+            fig.update_layout(height=420)
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Show improvement summary
+            st.markdown("#### 🚀 Resumen de Mejoras")
+            improvements = []
+            for (user, fname), group in evolution_df.groupby(['username', 'filename']):
+                group_sorted = group.sort_values('timestamp')
+                first_score = group_sorted.iloc[0]['score']
+                last_score = group_sorted.iloc[-1]['score']
+                delta = last_score - first_score
+                improvements.append({
+                    'Usuario': user,
+                    'Archivo': fname,
+                    'Score Inicial': first_score,
+                    'Score Actual': last_score,
+                    'Mejora': delta,
+                    'Iteraciones': len(group_sorted)
+                })
+
+            improvements_df = pd.DataFrame(improvements)
+            improvements_df = improvements_df.sort_values('Mejora', ascending=False)
+            st.dataframe(improvements_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("💡 Realiza al menos 2 analisis del mismo archivo para ver la comparativa antes/despues")
+    else:
+        st.info("Aun no hay analisis con metricas registradas. Usa Power BI Analyzer para empezar.")
 
     st.markdown("---")
 
-    # Events by day
-    st.markdown("### Actividad Temporal")
+    # ============================================================
+    # USER ACTIVITY
+    # ============================================================
+    st.markdown("### 👥 Actividad por Usuario")
 
-    daily_events = df.groupby('date').size().reset_index(name='eventos')
+    user_stats = df_filtered.groupby('username').agg(
+        sesiones=('session_id', 'nunique'),
+        eventos=('event', 'count'),
+        primera_vez=('timestamp', 'min'),
+        ultima_vez=('timestamp', 'max')
+    ).reset_index()
+
+    # Count events per user per app
+    df_with_app = df_filtered[df_filtered['app'].isin(
+        ['Power BI Analyzer', 'Documentation Generator', 'Layout Organizer', 'DAX Optimizer', 'BI Bot']
+    )]
+
+    if not df_with_app.empty:
+        app_usage_per_user = df_with_app.groupby(['username', 'app']).size().unstack(fill_value=0)
+        user_stats = user_stats.merge(app_usage_per_user, left_on='username', right_index=True, how='left')
+
+    # Fill NaN with 0 for apps not used
+    app_short_names = {
+        'Power BI Analyzer': 'Analyzer',
+        'Documentation Generator': 'DocGen',
+        'Layout Organizer': 'Layout',
+        'DAX Optimizer': 'DAX',
+        'BI Bot': 'Bot'
+    }
+
+    for full_name, short_name in app_short_names.items():
+        if full_name in user_stats.columns:
+            user_stats[short_name] = user_stats[full_name].fillna(0).astype(int)
+            user_stats = user_stats.drop(columns=[full_name])
+        else:
+            user_stats[short_name] = 0
+
+    user_stats['primera_vez'] = user_stats['primera_vez'].dt.strftime('%Y-%m-%d %H:%M')
+    user_stats['ultima_vez'] = user_stats['ultima_vez'].dt.strftime('%Y-%m-%d %H:%M')
+
+    # Reorder
+    cols_order = ['username', 'sesiones', 'eventos', 'primera_vez', 'ultima_vez',
+                  'Analyzer', 'DocGen', 'Layout', 'DAX', 'Bot']
+    user_stats = user_stats[cols_order]
+    user_stats.columns = ['Usuario', 'Sesiones', 'Eventos Total', 'Primera Actividad',
+                          'Ultima Actividad', 'Analyzer', 'DocGen', 'Layout', 'DAX', 'Bot']
+    user_stats = user_stats.sort_values('Eventos Total', ascending=False)
+
+    st.dataframe(user_stats, use_container_width=True, hide_index=True, height=350)
+
+    st.markdown("---")
+
+    # ============================================================
+    # ACTIVITY OVER TIME
+    # ============================================================
+    st.markdown("### 📅 Actividad Temporal")
+
+    daily_events = df_filtered.groupby('date').size().reset_index(name='eventos')
     daily_events['date'] = pd.to_datetime(daily_events['date'])
 
     fig = px.line(daily_events, x='date', y='eventos',
                   title='Eventos por Dia',
                   markers=True)
     fig.update_traces(line_color='#0451E4')
-    fig.update_xaxes(title='Fecha')
-    fig.update_yaxes(title='Numero de Eventos')
-    fig.update_layout(height=400)
+    fig.update_layout(height=350)
     st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
 
-    # Per-user analysis
-    st.markdown("### Actividad por Usuario")
-
-    # User filter
-    all_users = sorted(df['username'].unique().tolist())
-    selected_user = st.selectbox(
-        "Filtrar por usuario (dejar 'Todos' para ver todos)",
-        options=['Todos'] + all_users,
-        key="user_filter"
-    )
-
-    if selected_user != 'Todos':
-        df_filtered = df[df['username'] == selected_user]
-    else:
-        df_filtered = df
-
-    # User summary table
-    user_stats = df.groupby('username').agg(
-        sesiones=('session_id', 'nunique'),
-        eventos=('event', 'count'),
-        primera_vez=('timestamp', 'min'),
-        ultima_vez=('timestamp', 'max')
-    ).reset_index()
-    user_stats['primera_vez'] = user_stats['primera_vez'].dt.strftime('%Y-%m-%d %H:%M')
-    user_stats['ultima_vez'] = user_stats['ultima_vez'].dt.strftime('%Y-%m-%d %H:%M')
-    user_stats.columns = ['Usuario', 'Sesiones', 'Eventos', 'Primera Actividad', 'Ultima Actividad']
-    user_stats = user_stats.sort_values('Eventos', ascending=False)
-
-    col1, col2 = st.columns([1, 2])
-
-    with col1:
-        st.dataframe(user_stats, use_container_width=True, hide_index=True)
-
-    with col2:
-        fig = px.bar(user_stats, x='Usuario', y='Eventos',
-                     title='Eventos por Usuario',
-                     color='Sesiones',
-                     color_continuous_scale=['#E6E6E6', '#0451E4'])
-        fig.update_layout(height=400)
-        st.plotly_chart(fig, use_container_width=True)
-
-    # Per-user daily activity (if a specific user is selected)
-    if selected_user != 'Todos':
-        st.markdown(f"#### Actividad diaria de {selected_user}")
-        user_daily = df_filtered.groupby('date').size().reset_index(name='eventos')
-        user_daily['date'] = pd.to_datetime(user_daily['date'])
-        fig = px.bar(user_daily, x='date', y='eventos',
-                     title=f'Eventos por Dia - {selected_user}')
-        fig.update_traces(marker_color='#0451E4')
-        fig.update_layout(height=300)
-        st.plotly_chart(fig, use_container_width=True)
-
-    st.markdown("---")
-
-    # Analysis by app
-    st.markdown("### Analisis por App")
-
-    def detect_app(event_name):
-        if 'pbi_analysis' in event_name or 'powerbi_analyzer' in event_name:
-            return 'Power BI Analyzer'
-        elif 'docgen' in event_name:
-            return 'Documentation Generator'
-        elif 'layout' in event_name:
-            return 'Layout Organizer'
-        elif 'dax' in event_name:
-            return 'DAX Optimizer'
-        elif 'bot' in event_name or 'bi_bot' in event_name:
-            return 'BI Bot'
-        elif 'session' in event_name:
-            return 'Sistema'
-        else:
-            return 'Otro'
-
-    df['app'] = df['event'].apply(detect_app)
-    df_filtered['app'] = df_filtered['event'].apply(detect_app)
+    # ============================================================
+    # APP USAGE
+    # ============================================================
+    st.markdown("### 🚀 Uso por Aplicacion")
 
     app_usage = df_filtered[df_filtered['app'] != 'Sistema'].groupby('app').size().reset_index(name='eventos')
     app_usage = app_usage.sort_values('eventos', ascending=False)
 
     if not app_usage.empty:
         col1, col2 = st.columns([1, 2])
-
         with col1:
             st.dataframe(app_usage, use_container_width=True, hide_index=True)
-
         with col2:
             fig = px.pie(app_usage, values='eventos', names='app',
-                         title='Uso por Aplicacion',
-                         color_discrete_sequence=['#0451E4', '#000000', '#3C3C3C', '#AAAAAA', '#E6E6E6'])
-            fig.update_layout(height=400)
+                         title='Distribucion de Uso',
+                         color_discrete_sequence=['#0451E4', '#3B82F6', '#60A5FA', '#93C5FD', '#DBEAFE'])
+            fig.update_layout(height=380)
             st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("Aun no hay suficientes datos para analisis por app")
 
     st.markdown("---")
 
-    # Recent events (respects user filter)
-    st.markdown("### Ultimos Eventos")
+    # ============================================================
+    # RECENT EVENTS
+    # ============================================================
+    st.markdown("### 🕐 Ultimos Eventos")
 
-    recent_events = df_filtered.sort_values('timestamp', ascending=False).head(50)
+    recent_events = df_filtered.sort_values('timestamp', ascending=False).head(100)
     display_df = recent_events[['timestamp', 'username', 'hostname', 'event', 'session_id']].copy()
     display_df['timestamp'] = display_df['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
     display_df.columns = ['Fecha/Hora', 'Usuario', 'Equipo', 'Evento', 'Session ID']
 
-    st.dataframe(display_df, use_container_width=True, hide_index=True)
+    st.dataframe(display_df, use_container_width=True, hide_index=True, height=400)
 
-    # Export
+    # ============================================================
+    # EXPORT
+    # ============================================================
     st.markdown("---")
-    st.markdown("### Exportar Datos")
+    st.markdown("### 📥 Exportar Datos")
 
-    csv = df.to_csv(index=False)
+    csv = df_filtered.to_csv(index=False)
     st.download_button(
-        label="Descargar CSV completo",
+        label="Descargar CSV (con filtros aplicados)",
         data=csv,
         file_name=f"ypf_bi_monitor_usage_{datetime.now().strftime('%Y%m%d')}.csv",
         mime="text/csv"

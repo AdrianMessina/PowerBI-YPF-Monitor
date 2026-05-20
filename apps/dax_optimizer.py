@@ -298,6 +298,14 @@ def render_app(logger):
                     key="dax_zip_uploader"
                 )
 
+                st.markdown("""
+                <div style="background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.02) 100%);
+                            border-left: 3px solid #F59E0B; padding: 0.6rem 1rem; border-radius: 0 6px 6px 0;
+                            margin: 0.5rem 0; font-size: 0.85rem; color: #78350F;">
+                    ⚠️ <strong>Mantén el mismo nombre del archivo</strong> entre analisis para comparar mejoras en el Usage Dashboard.
+                </div>
+                """, unsafe_allow_html=True)
+
                 return None, uploaded_file
 
             else:
@@ -988,13 +996,15 @@ def render_app(logger):
                     recommendations_count=len(ranked_measures)
                 )
     
-                # Registrar análisis de medidas DAX (específico)
+                # Registrar análisis de medidas DAX (específico) - con score
                 usage_logger.log_dax_measures_analyzed(
                     measures_count=len(ranked_measures),
                     critical_count=stats.get('critical', 0),
                     high_count=stats.get('high', 0),
                     medium_count=stats.get('medium', 0),
-                    low_count=stats.get('low', 0)
+                    low_count=stats.get('low', 0),
+                    filename=Path(file_path).name,
+                    avg_risk_score=stats.get('avg_score')
                 )
             except Exception as e:
                 print(f"⚠️ Error al registrar análisis: {e}")
