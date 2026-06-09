@@ -1,12 +1,9 @@
-# Configuración de umbrales y pesos para análisis de reportes Power BI
+# Configuración de umbrales para análisis de reportes Power BI
 # Basado en: https://learn.microsoft.com/es-es/power-bi/guidance/power-bi-optimization
-# Sistema de scoring agrupado por dimensiones de calidad (v2.0)
 
-version: "2.0"
+version: "1.0"
 
-# ════════════════════════════════════════════════════════════════════
-# Umbrales por métrica (good / warning / critical)
-# ════════════════════════════════════════════════════════════════════
+# Umbrales por métrica (verde, amarillo, rojo)
 thresholds:
   visualizations_per_page:
     good: 10
@@ -85,86 +82,28 @@ thresholds:
     description: "Tamaño del modelo en MB"
     recommendation: "Optimizar modelo, eliminar columnas no usadas, revisar cardinalidad"
 
-# ════════════════════════════════════════════════════════════════════
-# Pesos individuales por métrica (suman 1.00)
-# Distribuidos para alimentar las 4 categorías de calidad
-# ════════════════════════════════════════════════════════════════════
+# Pesos para scoring general (0-100)
 weights:
-  # Modelo Semántico — 35%
   tables_in_model: 0.10
   relationships: 0.05
   bidirectional_relationships: 0.10
   calculated_columns: 0.05
   model_size_mb: 0.05
-
-  # DAX / Performance — 25%
   dax_measures_complex: 0.25
-
-  # Diseño del Reporte — 25%
   visualizations_per_page: 0.09
   filters_per_page: 0.08
   embedded_images_mb: 0.08
-
-  # Gobernanza / Mantenibilidad — 15%
   custom_visuals: 0.08
   total_pages: 0.07
 
-# ════════════════════════════════════════════════════════════════════
-# Dimensiones de calidad — agrupación por categoría
-# El score de cada categoría es promedio ponderado de sus métricas
-# ════════════════════════════════════════════════════════════════════
-categories:
-  modelo_semantico:
-    label: "Modelo Semántico"
-    icon: "structure"
-    weight: 0.35
-    description: "Cimiento del reporte: tablas, relaciones, columnas calculadas y tamaño del modelo. Mide la calidad estructural del diseño de datos."
-    metrics:
-      - tables_in_model
-      - relationships
-      - bidirectional_relationships
-      - calculated_columns
-      - model_size_mb
-
-  dax_performance:
-    label: "DAX / Performance"
-    icon: "speed"
-    weight: 0.25
-    description: "Calidad de las medidas DAX y su impacto en el rendimiento. Detecta medidas complejas que pueden ralentizar el reporte."
-    metrics:
-      - dax_measures_complex
-
-  diseno_reporte:
-    label: "Diseño del Reporte"
-    icon: "layout"
-    weight: 0.25
-    description: "Composición visual del reporte: densidad de visuales por página, filtros activos e imágenes embebidas que impactan el peso del archivo."
-    metrics:
-      - visualizations_per_page
-      - filters_per_page
-      - embedded_images_mb
-
-  gobernanza:
-    label: "Gobernanza / Mantenibilidad"
-    icon: "shield"
-    weight: 0.15
-    description: "Prácticas que afectan la mantenibilidad a largo plazo: uso responsable de custom visuals y cantidad razonable de páginas para navegación."
-    metrics:
-      - custom_visuals
-      - total_pages
-
-# ════════════════════════════════════════════════════════════════════
-# Umbrales de score global (alineados con Power BI Fixer)
-# ════════════════════════════════════════════════════════════════════
+# Categorías de scoring
 scoring:
-  excellent: 90    # 90-100  Excelente
-  good: 75         # 75-89   Bueno
-  warning: 60      # 60-74   Atención
-  poor: 0          # 0-59    Crítico
+  excellent: 90
+  good: 75
+  warning: 60
+  poor: 0
 
-# ════════════════════════════════════════════════════════════════════
-# Reglas adicionales (informativas)
-# ════════════════════════════════════════════════════════════════════
+# Reglas adicionales
 rules:
   - id: "avoid_bidirectional"
     name: "Evitar relaciones bidireccionales"
@@ -185,3 +124,36 @@ rules:
     name: "Optimizar interacciones visuales"
     severity: "info"
     description: "Deshabilitar interacciones innecesarias entre visuales"
+
+categories:
+  modelo_semantico:
+    label: "Modelo Semantico"
+    weight: 0.35
+    description: "Cimiento del reporte: tablas, relaciones, columnas calculadas y tamano del modelo."
+    metrics:
+      - tables_in_model
+      - relationships
+      - bidirectional_relationships
+      - calculated_columns
+      - model_size_mb
+  dax_performance:
+    label: "DAX / Performance"
+    weight: 0.25
+    description: "Calidad de medidas DAX y su impacto en el rendimiento."
+    metrics:
+      - dax_measures_complex
+  diseno_reporte:
+    label: "Diseno del Reporte"
+    weight: 0.25
+    description: "Composicion visual: densidad por pagina, filtros e imagenes embebidas."
+    metrics:
+      - visualizations_per_page
+      - filters_per_page
+      - embedded_images_mb
+  gobernanza:
+    label: "Gobernanza / Mantenibilidad"
+    weight: 0.15
+    description: "Buenas practicas y mantenibilidad a largo plazo."
+    metrics:
+      - custom_visuals
+      - total_pages

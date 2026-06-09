@@ -71,89 +71,27 @@ def render_app(logger_suite):
 
     st.markdown("---")
 
-    # PBIP File Selection
-    st.markdown("### Archivo PBIP")
-    
-    # Try auto-detect first
-    pbip_folder = project_root / "PBI test"
-    pbip_files = []
-    if pbip_folder.exists():
-        pbip_files = [f for f in pbip_folder.glob("*.pbip") if f.is_file()]
-    
-    # Set default path if found
-    if pbip_files:
-        pbip_file_path = pbip_files[0]
-        default_path = str(pbip_file_path.resolve())
-        st.success(f"✅ Archivo detectado: **{pbip_file_path.name}**")
-        st.info(f"📂 Ruta completa: `{default_path}`")
-    else:
-        default_path = ""
-    
-    # Always show text input (editable)
-    manual_path_input = st.text_input(
-        "Ruta del archivo PBIP (editable)",
-        value=default_path,
-        placeholder=r"C:\ruta\completa\al\archivo.pbip",
-        help="Pega la ruta completa del archivo .pbip (se detectan y eliminan comillas automáticamente)"
-    )
+    # PBIP File Selection - Cloud-ready (ZIP upload)
+    from shared.pbip_loader import PBIPLoader
+
+    pbip_storage = "/home/cdsw/pbip_projects"
+    loader = PBIPLoader(storage_path=pbip_storage)
+    pbip_path_str = loader.render_uploader(key="docgen_pbip_uploader")
+
+    if not pbip_path_str:
+        st.stop()
+
+    pbip_path = Path(pbip_path_str)
 
     # Warning about file naming consistency
     st.markdown("""
     <div style="background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.02) 100%);
                 border-left: 3px solid #F59E0B; padding: 0.6rem 1rem; border-radius: 0 6px 6px 0;
                 margin: 0.5rem 0; font-size: 0.85rem; color: #78350F;">
-        ⚠️ <strong>Mantén el mismo nombre del archivo</strong> para que el Usage Dashboard pueda rastrear las mejoras a lo largo del tiempo.
+        ⚠️ <strong>Manten el mismo nombre del archivo</strong> para que el Usage Dashboard pueda rastrear las mejoras a lo largo del tiempo.
     </div>
     """, unsafe_allow_html=True)
 
-    # Instructions on how to copy path
-    with st.expander("💡 ¿Cómo copiar la ruta del archivo?"):
-        st.markdown("""
-        **Opción A: Desde el Explorador de Windows**
-        1. Abre el Explorador de Windows
-        2. Navega hasta la carpeta que contiene tu archivo `.pbip`
-        3. **SHIFT + Click derecho** en el archivo `.pbip` → **Copiar como ruta de acceso**
-        4. Pega la ruta arriba ✅ **(se copiará con comillas, la app las procesa automáticamente)**
-
-        **Opción B: Desde la barra de direcciones**
-        1. Abre el Explorador de Windows
-        2. Navega hasta la carpeta que contiene tu archivo `.pbip`
-        3. Click en la barra de direcciones arriba → Copiar
-        4. Pega la ruta arriba y agrega `\\NombreDeArchivo.pbip` al final
-
-        **Ejemplo de ruta válida:**
-        ```
-        C:\\Users\\TuUsuario\\Documentos\\MiProyecto\\Reporte.pbip
-        ```
-        O con comillas:
-        ```
-        "C:\\Users\\TuUsuario\\Documentos\\MiProyecto\\Reporte.pbip"
-        ```
-
-        **Estructura PBIP esperada:**
-        - Archivo principal: `reporte.pbip`
-        - Carpeta asociada: `reporte.SemanticModel/` (modelo de datos)
-        - Carpeta asociada: `reporte.Report/` (visualizaciones)
-        """)
-
-    if manual_path_input:
-        # Clean path (remove quotes if present)
-        clean_path = manual_path_input.strip().strip('"').strip("'")
-        pbip_path = Path(clean_path)
-    
-        if not pbip_path.exists():
-            st.error(f"❌ El archivo no existe: `{pbip_path}`")
-            st.warning("Verifica que la ruta sea correcta y el archivo exista")
-            st.stop()
-    
-        if pbip_path.suffix.lower() != '.pbip':
-            st.error(f"❌ El archivo debe tener extensión .pbip (encontrado: `{pbip_path.suffix}`)")
-            st.stop()
-    else:
-        st.warning("⚠️ Por favor especifica la ruta del archivo .pbip")
-        if pbip_folder.exists():
-            st.info(f"💡 Coloca tu archivo .pbip en: `{pbip_folder.resolve()}`")
-        st.stop()
     
     st.markdown("---")
     
@@ -341,7 +279,27 @@ def render_app(logger_suite):
             frecuencia_flujo = "No especificada"
     
         st.markdown("---")
-    
+
+        # SECTION 5: Secciones a documentar (selectivo)
+        st.markdown('<div class="section-header">📋 SECCIONES A DOCUMENTAR</div>', unsafe_allow_html=True)
+        st.caption("Selecciona las secciones que deseas incluir en el documento. Por defecto se generan todas.")
+
+        _scol1, _scol2 = st.columns(2)
+        with _scol1:
+            inc_portada = st.checkbox("Portada y Version", value=True, key="inc_portada")
+            inc_usuarios = st.checkbox("Usuarios y Destinatarios", value=True, key="inc_usuarios")
+            inc_orig_datos = st.checkbox("Origenes de Datos (Power Query M)", value=True, key="inc_orig_datos")
+            inc_modelo_er = st.checkbox("Modelo de Relaciones (ER)", value=True, key="inc_modelo_er")
+            inc_seguridad = st.checkbox("Seguridad (RLS)", value=True, key="inc_seguridad")
+        with _scol2:
+            inc_objetivo = st.checkbox("Objetivo y Alcance", value=True, key="inc_objetivo")
+            inc_definiciones = st.checkbox("Definiciones (KPIs / Medidas DAX)", value=True, key="inc_definiciones")
+            inc_filtros = st.checkbox("Filtros del Reporte", value=True, key="inc_filtros")
+            inc_visuals = st.checkbox("Visualizaciones del Reporte", value=True, key="inc_visuals")
+            inc_anexo = st.checkbox("Anexo Tecnico", value=True, key="inc_anexo")
+
+        st.markdown("---")
+
         # Generate button
         generate = st.form_submit_button(
             "🚀 GENERAR DOCUMENTO WORD",
@@ -454,7 +412,19 @@ def render_app(logger_suite):
                 'administrador': administrador.strip() if administrador.strip() else None,
                 'solicitante': solicitante.strip() if solicitante.strip() else None,
                 'frecuencia_dataset': frecuencia_dataset,
-                'frecuencia_flujo': frecuencia_flujo
+                'frecuencia_flujo': frecuencia_flujo,
+                'include_sections': {
+                    'portada': inc_portada,
+                    'usuarios': inc_usuarios,
+                    'orig_datos': inc_orig_datos,
+                    'modelo_er': inc_modelo_er,
+                    'seguridad': inc_seguridad,
+                    'objetivo': inc_objetivo,
+                    'definiciones': inc_definiciones,
+                    'filtros': inc_filtros,
+                    'visuals': inc_visuals,
+                    'anexo': inc_anexo,
+                },
             }
     
             # Find template - Buscar en múltiples ubicaciones

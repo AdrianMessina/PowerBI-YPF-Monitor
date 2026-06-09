@@ -15,6 +15,74 @@ import pandas as pd
 import json
 import yaml
 import time
+import zipfile
+import shutil
+
+
+def extract_pbip_from_zip(uploaded_file, extract_to="/home/cdsw/pbip_projects"):
+    """
+    Extrae un archivo ZIP con estructura PBIP y retorna la ruta al archivo .pbip
+
+    Args:
+        uploaded_file: UploadedFile de Streamlit
+        extract_to: Directorio donde extraer (default: /home/cdsw/pbip_projects)
+
+    Returns:
+        str: Ruta al archivo .pbip encontrado, o None si hay error
+    """
+    try:
+        # Crear directorio si no existe
+        os.makedirs(extract_to, exist_ok=True)
+
+        # Nombre del proyecto (sin extensión .zip)
+        project_name = Path(uploaded_file.name).stem
+        project_path = Path(extract_to) / project_name
+
+        # Si ya existe, eliminar para evitar conflictos
+        if project_path.exists():
+            shutil.rmtree(project_path)
+
+        # Crear carpeta del proyecto
+        project_path.mkdir(parents=True, exist_ok=True)
+
+        # Extraer ZIP
+        with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
+            zip_ref.extractall(project_path)
+
+        # Buscar archivo .pbip
+        pbip_files = list(project_path.glob("**/*.pbip"))
+
+        if not pbip_files:
+            st.error(f"❌ No se encontró archivo .pbip dentro del ZIP")
+            return None
+
+        if len(pbip_files) > 1:
+            st.warning(f"⚠️ Se encontraron {len(pbip_files)} archivos .pbip. Usando el primero: {pbip_files[0].name}")
+
+        pbip_path = str(pbip_files[0])
+
+        # Verificar que existan las carpetas necesarias
+        pbip_dir = pbip_files[0].parent
+        report_dir = pbip_dir / f"{pbip_files[0].stem}.Report"
+        semantic_dir = pbip_dir / f"{pbip_files[0].stem}.SemanticModel"
+
+        missing_dirs = []
+        if not report_dir.exists():
+            missing_dirs.append(".Report")
+        if not semantic_dir.exists():
+            missing_dirs.append(".SemanticModel")
+
+        if missing_dirs:
+            st.warning(f"⚠️ Carpetas faltantes: {', '.join(missing_dirs)}. El análisis puede ser incompleto.")
+
+        return pbip_path
+
+    except zipfile.BadZipFile:
+        st.error("❌ El archivo no es un ZIP válido")
+        return None
+    except Exception as e:
+        st.error(f"❌ Error al extraer ZIP: {str(e)}")
+        return None
 
 
 def render_app(logger):
@@ -43,67 +111,88 @@ def render_app(logger):
     # Import shared styles (replaces app-specific CSS)
     from apps_core.layout_core.shared_styles import render_app_header, render_footer
 
-    # App-specific styles aligned to Industrial Data Observatory design system
+    # Minimal app-specific CSS (functional styles only - layout comes from shared CSS)
     st.markdown("""
         <style>
-        .score-excellent { color: var(--status-ok); }
-        .score-good { color: var(--status-ok); }
-        .score-warning { color: var(--status-warn); }
-        .score-poor { color: var(--status-danger); }
+        /* Power BI Analyzer - Functional CSS variables */
+        :root {
+            --success-color: #10B981;
+            --warning-color: #F59E0B;
+            --critical-color: #EF4444;
+        }
 
+        /* Score colors */
+        .score-excellent { color: var(--success-color); }
+        .score-good { color: #00D4AA; }
+        .score-warning { color: var(--warning-color); }
+        .score-poor { color: var(--critical-color); }
+
+        /* Badges */
         .badge {
-            padding: 0.25rem 0.7rem;
-            border-radius: var(--radius-full);
-            font-size: 0.7rem;
+            padding: 0.375rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
             font-weight: 600;
             display: inline-block;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            border: 1px solid transparent;
         }
         .badge-success {
-            background: var(--status-ok-bg);
-            color: var(--status-ok);
-            border-color: rgba(16,185,129,0.25);
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(16, 185, 129, 0.2);
         }
         .badge-warning {
-            background: var(--status-warn-bg);
-            color: var(--status-warn);
-            border-color: rgba(245,158,11,0.25);
+            background-color: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+            border: 1px solid rgba(245, 158, 11, 0.2);
         }
         .badge-danger {
-            background: var(--status-danger-bg);
-            color: var(--status-danger);
-            border-color: rgba(209,52,56,0.25);
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--critical-color);
+            border: 1px solid rgba(239, 68, 68, 0.2);
         }
 
+        /* Metric cards */
         .metric-card {
-            background: var(--surface-2);
-            padding: 1.5rem;
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border-default);
-            border-left: 3px solid var(--brand-accent);
-            color: var(--text-secondary);
+            background: white;
+            padding: 1.75rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-left: 4px solid #0451E4;
         }
 
+        /* Tabs - YPF styled */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+            background-color: #E6E6E6;
+            padding: 0.5rem;
+            border-radius: 12px;
+            border-bottom: 3px solid #0451E4;
+        }
+        .stTabs [aria-selected="true"] {
+            background: linear-gradient(135deg, #0451E4 0%, #0340B8 100%);
+            color: #FFFFFF;
+            box-shadow: 0 2px 8px rgba(4, 81, 228, 0.3);
+        }
+
+        /* Loader spinner */
         .ypf-loader-container {
             display: flex;
             flex-direction: row;
             align-items: center;
             justify-content: center;
-            padding: 1.25rem;
-            background: var(--surface-2);
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border-default);
-            border-left: 3px solid var(--brand-accent);
+            padding: 1.5rem;
+            background: rgba(4, 81, 228, 0.03);
+            border-radius: 12px;
+            border: 2px solid #0451E4;
             gap: 1rem;
         }
         .ypf-loader {
-            border: 3px solid var(--surface-3);
-            border-top: 3px solid var(--brand-accent);
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #000000;
+            border-right: 4px solid #0451E4;
             border-radius: 50%;
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
         }
         @keyframes spin {
@@ -112,9 +201,23 @@ def render_app(logger):
         }
         .ypf-loader-text {
             margin: 0;
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 600;
+            color: #000000;
+        }
+
+        /* Sidebar Expanders - Better Contrast */
+        [data-testid="stSidebar"] .streamlit-expanderHeader,
+        [data-testid="stSidebar"] details summary,
+        [data-testid="stSidebar"] summary {
+            color: #E2E8F0 !important;
+            font-weight: 600 !important;
+        }
+        [data-testid="stSidebar"] .streamlit-expanderContent,
+        [data-testid="stSidebar"] details div[role="region"],
+        [data-testid="stSidebar"] .streamlit-expanderContent p,
+        [data-testid="stSidebar"] .streamlit-expanderContent li {
+            color: #CBD5E1 !important;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -177,142 +280,104 @@ def render_app(logger):
     
     
     def create_score_gauge(score):
-        """Score gauge — Industrial Data Observatory theme. Thresholds 90/75/60."""
+        """Crea un gauge chart moderno y minimalista para el score"""
         fig = go.Figure(go.Indicator(
             mode="gauge+number",
             value=score,
             domain={'x': [0, 1], 'y': [0, 1]},
             title={
                 'text': "Score General",
-                'font': {'size': 18, 'family': 'Space Grotesk, sans-serif', 'color': '#E8ECF4'}
+                'font': {'size': 22, 'family': 'Inter, sans-serif', 'color': '#2C3E50'}
             },
             number={
-                'font': {'size': 52, 'family': 'JetBrains Mono, monospace', 'color': get_score_color(score)},
+                'font': {'size': 48, 'family': 'Inter, sans-serif', 'color': get_score_color(score)},
                 'suffix': "/100"
             },
             gauge={
                 'axis': {
                     'range': [None, 100],
-                    'tickwidth': 1,
-                    'tickcolor': "#354155",
-                    'tickfont': {'size': 11, 'color': '#8B95A8', 'family': 'JetBrains Mono, monospace'}
+                    'tickwidth': 2,
+                    'tickcolor': "#E1E8ED",
+                    'tickfont': {'size': 12, 'color': '#6B7280'}
                 },
                 'bar': {
                     'color': get_score_color(score),
-                    'thickness': 0.72
+                    'thickness': 0.75
                 },
-                'bgcolor': "#181D2A",
-                'borderwidth': 1,
-                'bordercolor': "#252D3D",
+                'bgcolor': "#F7F9FC",
+                'borderwidth': 0,
                 'steps': [
-                    {'range': [0, 60], 'color': 'rgba(209, 52, 56, 0.18)'},
-                    {'range': [60, 75], 'color': 'rgba(245, 158, 11, 0.18)'},
-                    {'range': [75, 90], 'color': 'rgba(0, 120, 212, 0.18)'},
-                    {'range': [90, 100], 'color': 'rgba(16, 185, 129, 0.20)'}
+                    {'range': [0, 60], 'color': 'rgba(239, 68, 68, 0.1)'},
+                    {'range': [60, 75], 'color': 'rgba(245, 158, 11, 0.1)'},
+                    {'range': [75, 90], 'color': 'rgba(0, 212, 170, 0.1)'},
+                    {'range': [90, 100], 'color': 'rgba(16, 185, 129, 0.1)'}
                 ],
                 'threshold': {
-                    'line': {'color': "#F2C811", 'width': 3},
-                    'thickness': 0.85,
+                    'line': {'color': "#10B981", 'width': 3},
+                    'thickness': 0.8,
                     'value': 90
                 }
             }
         ))
-
+    
         fig.update_layout(
             height=320,
             margin=dict(l=30, r=30, t=60, b=30),
             paper_bgcolor="rgba(0,0,0,0)",
-            font={'color': "#E8ECF4", 'family': "Space Grotesk, sans-serif"}
+            font={'color': "#2C3E50", 'family': "Inter, sans-serif"}
         )
-
+    
         return fig
 
 
-    def render_category_breakdown(category_scores: dict):
-        """Renderiza el breakdown del score por las 4 dimensiones de calidad.
-
-        Cada categoría muestra: peso, score, status badge y barra de progreso.
-        Diseño Industrial Data Observatory — surface cards + accent amarillo.
-        """
+    def render_category_breakdown(category_scores):
         if not category_scores:
             return
-
-        # Orden fijo (modelo primero por peso 35%, luego DAX 25%, diseño 25%, gobernanza 15%)
         ordered_keys = ['modelo_semantico', 'dax_performance', 'diseno_reporte', 'gobernanza']
         ordered = [(k, category_scores[k]) for k in ordered_keys if k in category_scores]
-
-        # Status -> (label corto, color hex, color rgba para fondo)
         status_palette = {
             'excellent':   ('Excelente', '#10B981', 'rgba(16,185,129,0.10)'),
-            'good':        ('Bueno',     '#0078D4', 'rgba(0,120,212,0.10)'),
-            'warning':     ('Atención',  '#F59E0B', 'rgba(245,158,11,0.10)'),
-            'poor':        ('Crítico',   '#D13438', 'rgba(209,52,56,0.10)'),
-            'unavailable': ('N/D',       '#5A6478', 'rgba(90,100,120,0.08)'),
+            'good':        ('Bueno',     '#0451E4', 'rgba(4,81,228,0.10)'),
+            'warning':     ('Atencion',  '#F59E0B', 'rgba(245,158,11,0.10)'),
+            'poor':        ('Critico',   '#EF4444', 'rgba(239,68,68,0.10)'),
+            'unavailable': ('N/D',       '#94A3B8', 'rgba(148,163,184,0.10)'),
         }
-
-        st.markdown("""
-        <div style="display:flex; align-items:baseline; justify-content:space-between;
-                    margin: 0.25rem 0 0.85rem 0;">
-            <h4 style="font-family:'Space Grotesk',sans-serif; color:#E8ECF4;
-                       font-size:1rem; font-weight:600; margin:0; letter-spacing:-0.02em;">
-                Score por Dimensión
-            </h4>
-            <span style="font-family:'JetBrains Mono',monospace; color:#5A6478;
-                         font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase;">
-                4 dimensiones · ponderado
-            </span>
-        </div>
-        """, unsafe_allow_html=True)
-
+        st.markdown(
+            "<div style='display:flex;align-items:baseline;justify-content:space-between;margin:0.25rem 0 0.85rem 0;'>"
+            "<h4 style=\"color:#1E293B;font-family:'Fira Sans',sans-serif;font-size:1rem;font-weight:600;margin:0;\">Score por Dimension</h4>"
+            "<span style=\"color:#94A3B8;font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:500;font-family:'Fira Sans',sans-serif;\">4 dimensiones &middot; promedio ponderado</span>"
+            "</div>",
+            unsafe_allow_html=True
+        )
         cols = st.columns(len(ordered))
         for col, (cat_key, cat) in zip(cols, ordered):
             score = cat.get('score')
             status = cat.get('status', 'unavailable')
             label_status, color_hex, color_bg = status_palette.get(status, status_palette['unavailable'])
             weight_pct = int(round(cat.get('weight', 0) * 100))
-            score_display = f"{int(round(score))}" if score is not None else "—"
+            score_display = str(int(round(score))) if score is not None else "-"
             bar_width = max(0, min(100, score if score is not None else 0))
-
             with col:
-                st.markdown(f"""
-                <div style="background:#181D2A; border:1px solid #1A2030;
-                            border-left:3px solid #F2C811; border-radius:10px;
-                            padding:1rem 1.1rem; height:100%; position:relative;
-                            overflow:hidden;">
-                    <div style="display:flex; align-items:center; justify-content:space-between;
-                                margin-bottom:0.6rem;">
-                        <span style="font-family:'JetBrains Mono',monospace; color:#F2C811;
-                                     font-size:0.62rem; letter-spacing:0.14em; font-weight:600;
-                                     padding:0.15rem 0.45rem; border-radius:4px;
-                                     background:rgba(242,200,17,0.10); border:1px solid rgba(242,200,17,0.20);">
-                            {weight_pct}%
-                        </span>
-                        <span style="font-family:'JetBrains Mono',monospace; color:{color_hex};
-                                     font-size:0.6rem; letter-spacing:0.10em; font-weight:600;
-                                     padding:0.15rem 0.4rem; border-radius:9999px;
-                                     background:{color_bg}; text-transform:uppercase;">
-                            {label_status}
-                        </span>
-                    </div>
-                    <div style="font-family:'Space Grotesk',sans-serif; color:#E8ECF4;
-                                font-size:0.82rem; font-weight:600; letter-spacing:-0.01em;
-                                line-height:1.25; margin-bottom:0.5rem; min-height:2.1rem;">
-                        {cat['label']}
-                    </div>
-                    <div style="font-family:'JetBrains Mono',monospace; color:{color_hex};
-                                font-size:1.85rem; font-weight:600; line-height:1;
-                                margin-bottom:0.6rem;">
-                        {score_display}<span style="color:#5A6478; font-size:0.85rem; margin-left:2px;">/100</span>
-                    </div>
-                    <div style="background:#0B0E14; border-radius:9999px; height:5px;
-                                overflow:hidden; border:1px solid #1A2030;">
-                        <div style="width:{bar_width}%; height:100%;
-                                    background:linear-gradient(90deg, {color_hex} 0%, {color_hex}cc 100%);
-                                    border-radius:9999px;
-                                    transition:width 400ms cubic-bezier(0.16,1,0.3,1);"></div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                html = (
+                    "<div style='background:#FFFFFF;border:1px solid #E2E8F0;border-left:4px solid #0451E4;"
+                    "border-radius:0 8px 8px 0;padding:1rem 1.1rem;height:100%;box-shadow:0 2px 8px rgba(0,0,0,0.04);'>"
+                    "<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;'>"
+                    "<span style=\"color:#0451E4;font-size:0.7rem;letter-spacing:0.08em;font-weight:700;padding:0.18rem 0.55rem;border-radius:6px;"
+                    "background:rgba(4,81,228,0.08);border:1px solid rgba(4,81,228,0.18);font-family:'Fira Sans',sans-serif;\">"
+                    + str(weight_pct) + "%</span>"
+                    "<span style=\"color:" + color_hex + ";font-size:0.65rem;letter-spacing:0.08em;font-weight:600;padding:0.18rem 0.5rem;"
+                    "border-radius:9999px;background:" + color_bg + ";text-transform:uppercase;font-family:'Fira Sans',sans-serif;\">"
+                    + label_status + "</span></div>"
+                    "<div style=\"color:#1E293B;font-family:'Fira Sans',sans-serif;font-size:0.88rem;font-weight:600;"
+                    "line-height:1.3;margin-bottom:0.55rem;min-height:2.3rem;\">" + cat['label'] + "</div>"
+                    "<div style=\"color:" + color_hex + ";font-family:'Fira Sans',sans-serif;font-size:2rem;font-weight:700;"
+                    "line-height:1;margin-bottom:0.65rem;\">" + score_display
+                    + "<span style='color:#94A3B8;font-size:0.9rem;font-weight:500;margin-left:2px;'>/100</span></div>"
+                    "<div style='background:#F1F5F9;border-radius:9999px;height:6px;overflow:hidden;'>"
+                    "<div style='width:" + str(bar_width) + "%;height:100%;background:linear-gradient(90deg," + color_hex + " 0%," + color_hex + "dd 100%);"
+                    "border-radius:9999px;'></div></div></div>"
+                )
+                st.markdown(html, unsafe_allow_html=True)
     
     
     def create_metrics_comparison_chart(metric_scores, metrics):
@@ -774,49 +839,21 @@ def render_app(logger):
     
             with col1:
                 st.markdown("#### Tablas del Modelo")
-
-                # Obtener desglose de tablas si está disponible
-                tables_by_type = metrics.get('tables_by_type', {})
-                total_tables = metrics.get('total_tables', 0)
-
                 # Usar nueva función con thresholds
                 display_metric_with_threshold(
                     "Total de Tablas",
-                    total_tables,
+                    metrics.get('total_tables', 0),
                     thresholds.get('tables_in_model')
                 )
-
-                # Mostrar desglose si está disponible
-                if tables_by_type and any(tables_by_type.values()):
-                    user_count = tables_by_type.get('user', 0)
-                    calc_count = tables_by_type.get('calculated', 0)
-                    auto_template = tables_by_type.get('auto_datetime_template', 0)
-                    auto_local = tables_by_type.get('auto_datetime_local', 0)
-                    system_hidden = tables_by_type.get('system_hidden', 0)
-                    total_in_tmdl = user_count + calc_count + auto_template + auto_local + system_hidden
-
-                    with st.expander("📋 Ver desglose detallado de tablas"):
-                        st.markdown(f"""
-**Tablas contabilizadas ({total_tables}):**
-- ✅ {user_count} tablas de datos (Import/DirectQuery)
-- ✅ {calc_count} tablas calculadas (DAX)
-
-**Excluidas (automáticas de Power BI):**
-- ❌ {auto_template} DateTableTemplate (Auto Date/Time)
-- ❌ {auto_local} LocalDateTable (generadas por columnas de fecha)
-- ❌ {system_hidden} tablas ocultas del sistema
-
-**Total en archivos TMDL:** {total_in_tmdl} tablas
-                        """)
-
+    
                 st.markdown("---")
-
+    
                 display_metric_with_threshold(
                     "Columnas Calculadas",
                     metrics.get('calculated_columns', 0),
                     thresholds.get('calculated_columns')
                 )
-
+    
                 st.markdown("---")
                 st.metric("Tablas Calculadas", metrics.get('calculated_tables', 0))
     
@@ -1145,81 +1182,125 @@ def render_app(logger):
                 - El analizador detectará todas las carpetas del proyecto automáticamente
                 """)
 
-        st.markdown("**📋 Paso a paso para copiar la ruta:**")
+        # Detectar entorno (Cloud vs Local)
+        is_cloud = os.getenv('DEPLOYMENT_ENV') == 'production'
+        file_to_analyze = None
 
-        st.markdown("""
-        <div style='background-color: #0451E4;
-                    padding: 0.75rem 1rem;
-                    border-radius: 6px;
-                    border: 2px solid #000000;
-                    margin: 1rem 0;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
-            <p style='color: #000; margin: 0; font-weight: 700; font-size: 0.85rem;'>
-                ⚠️ IMPORTANTE: Copia el archivo .pbip, NO la carpeta
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+        if is_cloud:
+            # ===== MODO CLOUD: ZIP UPLOAD =====
+            st.markdown("""
+            <div style='background-color: #0451E4;
+                        padding: 0.75rem 1rem;
+                        border-radius: 6px;
+                        border: 2px solid #000000;
+                        margin: 1rem 0;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
+                <p style='color: #000; margin: 0; font-weight: 700; font-size: 0.85rem;'>
+                    📦 Sube tu proyecto PBIP comprimido (ZIP)
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
 
-        st.markdown("""
-        1. 📂 Abre el **Explorador de Windows**
-        2. 🔍 Navega hasta la carpeta de tu proyecto
-        3. 📄 Busca el archivo que termina en **`.pbip`** (ícono de Power BI)
-        4. ➡️ Click derecho en el archivo → **Copiar como ruta de acceso**
-        5. 📋 **Pega** la ruta en el campo de abajo (Ctrl+V)
+            st.markdown("""
+            **📋 Preparar tu proyecto para análisis:**
 
-        **Nota:** Windows agregará comillas automáticamente - ¡no te preocupes! El analizador las quitará.
-        """)
+            1. 📂 Localiza tu proyecto PBIP en Windows:
+               ```
+               📁 MiCarpeta/
+               ├── 📄 MiReporte.pbip
+               ├── 📁 MiReporte.Report/
+               └── 📁 MiReporte.SemanticModel/
+               ```
 
-        pbip_path = st.text_input(
-            "Ruta del archivo .pbip:",
-            placeholder=r'C:\Users\TuUsuario\MiCarpeta\MiReporte.pbip',
-            help="Pega la ruta completa del archivo .pbip (puede incluir comillas). Ejemplo: \"C:\\Proyectos\\MiReporte.pbip\""
-        )
+            2. 🗜️ **Comprime los 3 elementos** en un ZIP:
+               - Selecciona el archivo `.pbip` y las 2 carpetas
+               - Click derecho → "Enviar a" → "Carpeta comprimida"
 
-        # Warning about file naming consistency
-        st.markdown("""
-        <div style="background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.02) 100%);
-                    border-left: 3px solid #F59E0B; padding: 0.6rem 1rem; border-radius: 0 6px 6px 0;
-                    margin: 0.5rem 0; font-size: 0.85rem; color: #78350F;">
-            ⚠️ <strong>Mantén el mismo nombre del archivo</strong> entre analisis para que el Usage Dashboard pueda comparar el score antes/despues.
-        </div>
-        """, unsafe_allow_html=True)
+            3. ⬆️ **Sube el archivo ZIP** usando el botón de abajo
 
-        # Validación mejorada - ARREGLADA para aceptar archivos .pbip
-        if pbip_path:
-            # Limpiar espacios y comillas (automáticas de Windows)
-            pbip_path = pbip_path.strip().strip('"').strip("'")
+            **Nota:** El archivo ZIP debe contener el `.pbip` y las carpetas en la raíz (no dentro de subcarpetas).
+            """)
 
-            if not os.path.exists(pbip_path):
-                st.error("❌ La ruta ingresada no existe. Verifica que la ruta sea correcta.")
-                st.warning("💡 **Tip**: Copia la ruta completa desde el Explorador de Windows (Ctrl+C en la barra de direcciones)")
-                file_to_analyze = None
-            elif os.path.isfile(pbip_path):
-                # Es un archivo - verificar si es .pbip
-                if pbip_path.endswith('.pbip'):
-                    st.success("✅ Archivo PBIP detectado correctamente")
-                    st.info("📁 El analizador buscará automáticamente las carpetas .Report y .SemanticModel")
-                    file_to_analyze = pbip_path
-                else:
-                    st.error("❌ El archivo debe tener extensión .pbip")
-                    st.info("💡 Busca el archivo que termina en `.pbip` en la carpeta de tu proyecto")
-                    file_to_analyze = None
-            elif os.path.isdir(pbip_path):
-                # Es una carpeta
-                if pbip_path.endswith('.Report') or pbip_path.endswith('.SemanticModel') or pbip_path.endswith('.Dataset'):
-                    st.success("✅ Carpeta de proyecto PBIP detectada")
-                    st.info("📁 Se analizarán automáticamente las carpetas .Report y .SemanticModel")
-                    file_to_analyze = pbip_path
-                else:
-                    # Ruta genérica, intentar de todas formas
-                    st.warning("⚠️ La carpeta no tiene una extensión PBIP reconocida (.Report, .SemanticModel)")
-                    st.info("ℹ️ Se intentará analizar de todas formas. Si contiene carpetas del proyecto, funcionará.")
-                    file_to_analyze = pbip_path
-            else:
-                st.error("❌ La ruta no es válida")
-                file_to_analyze = None
+            uploaded_file = st.file_uploader(
+                "Selecciona el archivo ZIP con tu proyecto PBIP:",
+                type=['zip'],
+                help="Archivo ZIP conteniendo: archivo.pbip, carpeta .Report y carpeta .SemanticModel"
+            )
+
+            if uploaded_file is not None:
+                with st.spinner("📦 Extrayendo proyecto PBIP..."):
+                    file_to_analyze = extract_pbip_from_zip(uploaded_file)
+
+                if file_to_analyze:
+                    st.success(f"✅ Proyecto extraído correctamente: `{Path(file_to_analyze).name}`")
+                    st.info("📁 El analizador procesará automáticamente las carpetas .Report y .SemanticModel")
+
         else:
-            file_to_analyze = None
+            # ===== MODO LOCAL: FILE PATH INPUT =====
+            st.markdown("**📋 Paso a paso para copiar la ruta:**")
+
+            st.markdown("""
+            <div style='background-color: #0451E4;
+                        padding: 0.75rem 1rem;
+                        border-radius: 6px;
+                        border: 2px solid #000000;
+                        margin: 1rem 0;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
+                <p style='color: #000; margin: 0; font-weight: 700; font-size: 0.85rem;'>
+                    ⚠️ IMPORTANTE: Copia el archivo .pbip, NO la carpeta
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            1. 📂 Abre el **Explorador de Windows**
+            2. 🔍 Navega hasta la carpeta de tu proyecto
+            3. 📄 Busca el archivo que termina en **`.pbip`** (ícono de Power BI)
+            4. ➡️ Click derecho en el archivo → **Copiar como ruta de acceso**
+            5. 📋 **Pega** la ruta en el campo de abajo (Ctrl+V)
+
+            **Nota:** Windows agregará comillas automáticamente - ¡no te preocupes! El analizador las quitará.
+            """)
+
+            pbip_path = st.text_input(
+                "Ruta del archivo .pbip:",
+                placeholder=r'C:\Users\TuUsuario\MiCarpeta\MiReporte.pbip',
+                help="Pega la ruta completa del archivo .pbip (puede incluir comillas). Ejemplo: \"C:\\Proyectos\\MiReporte.pbip\""
+            )
+
+            # Validación mejorada
+            if pbip_path:
+                # Limpiar espacios y comillas (automáticas de Windows)
+                pbip_path = pbip_path.strip().strip('"').strip("'")
+
+                if not os.path.exists(pbip_path):
+                    st.error("❌ La ruta ingresada no existe. Verifica que la ruta sea correcta.")
+                    st.warning("💡 **Tip**: Copia la ruta completa desde el Explorador de Windows (Ctrl+C en la barra de direcciones)")
+                    file_to_analyze = None
+                elif os.path.isfile(pbip_path):
+                    # Es un archivo - verificar si es .pbip
+                    if pbip_path.endswith('.pbip'):
+                        st.success("✅ Archivo PBIP detectado correctamente")
+                        st.info("📁 El analizador buscará automáticamente las carpetas .Report y .SemanticModel")
+                        file_to_analyze = pbip_path
+                    else:
+                        st.error("❌ El archivo debe tener extensión .pbip")
+                        st.info("💡 Busca el archivo que termina en `.pbip` en la carpeta de tu proyecto")
+                        file_to_analyze = None
+                elif os.path.isdir(pbip_path):
+                    # Es una carpeta
+                    if pbip_path.endswith('.Report') or pbip_path.endswith('.SemanticModel') or pbip_path.endswith('.Dataset'):
+                        st.success("✅ Carpeta de proyecto PBIP detectada")
+                        st.info("📁 Se analizarán automáticamente las carpetas .Report y .SemanticModel")
+                        file_to_analyze = pbip_path
+                    else:
+                        # Ruta genérica, intentar de todas formas
+                        st.warning("⚠️ La carpeta no tiene una extensión PBIP reconocida (.Report, .SemanticModel)")
+                        st.info("ℹ️ Se intentará analizar de todas formas. Si contiene carpetas del proyecto, funcionará.")
+                        file_to_analyze = pbip_path
+                else:
+                    st.error("❌ La ruta no es válida")
+                    file_to_analyze = None
     
         if file_to_analyze:
             try:
@@ -1409,15 +1490,9 @@ def render_app(logger):
                                         st.metric(label, value, delta=delta)
                                     else:
                                         st.metric(label, value)
-
-                    # Breakdown por dimensión de calidad (fila full-width bajo el gauge + resumen)
+    
                     st.markdown("---")
-                    cat_scores = metrics.get('category_scores')
-                    if cat_scores:
-                        render_category_breakdown(cat_scores)
-
-                    st.markdown("---")
-
+    
                     # FIX v1.1: Información adicional - solo si está disponible
                     additional_info = []
     
@@ -1821,148 +1896,82 @@ def render_app(logger):
                     # Mostrar JSON siempre disponible para PBIP
                     show_json = True
 
-                    # Initialize session state for export buttons
-                    if 'html_generated' not in st.session_state:
-                        st.session_state.html_generated = False
-                        st.session_state.html_content = None
-                        st.session_state.html_filename = None
-                    if 'json_generated' not in st.session_state:
-                        st.session_state.json_generated = False
-                        st.session_state.json_content = None
-                        st.session_state.json_filename = None
-
-                    # CSS for success button state
-                    st.markdown("""
-                    <style>
-                    .stDownloadButton > button {
-                        background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
-                        border: 1px solid #10b981 !important;
-                        color: white !important;
-                        font-weight: 600 !important;
-                        transition: all 280ms ease !important;
-                    }
-                    .stDownloadButton > button:hover {
-                        background: linear-gradient(135deg, #047857 0%, #065f46 100%) !important;
-                        box-shadow: 0 4px 12px rgba(5,150,105,0.3) !important;
-                        transform: translateY(-1px) !important;
-                    }
-                    </style>
-                    """, unsafe_allow_html=True)
-
                     # Crear columnas para las opciones
                     col1, col2 = st.columns(2)
-
+    
                     # Opción 1: HTML (siempre disponible)
                     with col1:
                         st.markdown("### 📄 Reporte HTML Interactivo")
                         st.write("Genera un reporte HTML completo con gráficos interactivos.")
                         st.write("**Incluye**: Botón para imprimir o guardar como PDF directamente desde el navegador.")
-
-                        # Example images
-                        with st.expander("👁️ Ver ejemplo de reporte HTML"):
-                            html_ex1 = Path(__file__).parent.parent / "assets" / "export_html_example_1.jpg"
-                            html_ex2 = Path(__file__).parent.parent / "assets" / "export_html_example_2.jpg"
-                            if html_ex1.exists():
-                                st.image(str(html_ex1), caption="Vista de reporte HTML", use_container_width=True)
-                            if html_ex2.exists():
-                                st.image(str(html_ex2), caption="Detalles del análisis", use_container_width=True)
-
-                        # Show generate button only if not generated yet
-                        if not st.session_state.html_generated:
-                            if st.button("🎨 Generar Reporte HTML", key="gen_html", use_container_width=True, type="primary"):
-                                with st.spinner("Generando reporte HTML..."):
-                                    generator = ReportGenerator()
-                                    output_path = os.path.join(
-                                        tempfile.gettempdir(),
-                                        f"PowerBI_Report_{clean_name}.html"
-                                    )
-                                    generator.generate_html_report(result, output_path)
-
-                                    # ========================================
-                                    # LOGGING: Registrar reporte HTML generado
-                                    # ========================================
-                                    if LOGGING_ENABLED and usage_logger:
-                                        try:
-                                            report_size_kb = os.path.getsize(output_path) / 1024
-                                            usage_logger.log_event('report_generated', {
-                                                'report_format': 'html',
-                                                'report_size_kb': report_size_kb
-                                            })
-                                        except Exception as e:
-                                            print(f"⚠️ Error al registrar reporte: {e}")
-
-                                    with open(output_path, 'r', encoding='utf-8') as f:
-                                        html_content = f.read()
-
-                                    # Store in session state
-                                    st.session_state.html_generated = True
-                                    st.session_state.html_content = html_content
-                                    st.session_state.html_filename = f"PowerBI_Report_{clean_name}.html"
-
-                                st.success("✅ Reporte HTML generado exitosamente!")
-                                st.rerun()
-
-                        # Show download button if generated
-                        if st.session_state.html_generated:
-                            st.download_button(
-                                label="📥 Descargar Reporte HTML",
-                                data=st.session_state.html_content,
-                                file_name=st.session_state.html_filename,
-                                mime="text/html",
-                                use_container_width=True,
-                                key="download_html"
-                            )
+    
+                        if st.button("🎨 Generar Reporte HTML", width="stretch", type="primary"):
+                            with st.spinner("Generando reporte HTML..."):
+                                generator = ReportGenerator()
+                                output_path = os.path.join(
+                                    tempfile.gettempdir(),
+                                    f"PowerBI_Report_{clean_name}.html"
+                                )
+                                generator.generate_html_report(result, output_path)
+    
+                                # ========================================
+                                # LOGGING: Registrar reporte HTML generado
+                                # ========================================
+                                if LOGGING_ENABLED and usage_logger:
+                                    try:
+                                        report_size_kb = os.path.getsize(output_path) / 1024
+                                        usage_logger.log_event('report_generated', {
+                                            'report_format': 'html',
+                                            'report_size_kb': report_size_kb
+                                        })
+                                    except Exception as e:
+                                        print(f"⚠️ Error al registrar reporte: {e}")
+    
+                                with open(output_path, 'r', encoding='utf-8') as f:
+                                    html_content = f.read()
+    
+                                st.download_button(
+                                    label="📥 Descargar Reporte HTML",
+                                    data=html_content,
+                                    file_name=f"PowerBI_Report_{clean_name}.html",
+                                    mime="text/html",
+                                    width="stretch",
+                                    use_container_width=True
+                                )
+    
+                            st.success("✅ Reporte HTML generado exitosamente!")
                             st.info("💡 **Tip**: Una vez descargado, abre el archivo HTML y usa el botón 'Imprimir/Guardar como PDF' en la esquina superior derecha para generar un PDF.")
-
+    
                     # Opción 2: JSON (solo para PBIP)
                     if show_json and col2:
                         with col2:
                             st.markdown("### 📊 Datos en Formato JSON")
                             st.write("Exporta todos los datos del análisis en formato JSON.")
                             st.write("**Útil para**: Procesamiento programático o integración con otras herramientas.")
-
-                            # Example image
-                            with st.expander("👁️ Ver ejemplo de integración JSON"):
-                                json_ex = Path(__file__).parent.parent / "assets" / "export_json_example.jpg"
-                                if json_ex.exists():
-                                    st.image(str(json_ex), caption="JSON en Power BI - Integración directa", use_container_width=True)
-                                st.info("💡 El JSON exportado puede ser importado directamente en Power BI para análisis adicional")
-
-                            # Show generate button only if not generated yet
-                            if not st.session_state.json_generated:
-                                if st.button("📊 Generar JSON", key="gen_json", use_container_width=True):
-                                    json_content = json.dumps(result, indent=2, ensure_ascii=False)
-
-                                    # ========================================
-                                    # LOGGING: Registrar reporte JSON generado
-                                    # ========================================
-                                    if LOGGING_ENABLED and usage_logger:
-                                        try:
-                                            report_size_kb = len(json_content.encode('utf-8')) / 1024
-                                            usage_logger.log_event('report_generated', {
-                                                'report_format': 'json',
-                                                'report_size_kb': report_size_kb
-                                            })
-                                        except Exception as e:
-                                            print(f"⚠️ Error al registrar reporte: {e}")
-
-                                    # Store in session state
-                                    st.session_state.json_generated = True
-                                    st.session_state.json_content = json_content
-                                    st.session_state.json_filename = f"PowerBI_Report_{clean_name}.json"
-
-                                    st.success("✅ JSON generado exitosamente!")
-                                    st.rerun()
-
-                            # Show download button if generated
-                            if st.session_state.json_generated:
+    
+                            if st.button("📊 Generar JSON", width="stretch"):
+                                json_content = json.dumps(result, indent=2, ensure_ascii=False)
+    
+                                # ========================================
+                                # LOGGING: Registrar reporte JSON generado
+                                # ========================================
+                                if LOGGING_ENABLED and usage_logger:
+                                    try:
+                                        report_size_kb = len(json_content.encode('utf-8')) / 1024
+                                        usage_logger.log_event('report_generated', {
+                                            'report_format': 'json',
+                                            'report_size_kb': report_size_kb
+                                        })
+                                    except Exception as e:
+                                        print(f"⚠️ Error al registrar reporte: {e}")
+    
                                 st.download_button(
                                     label="📥 Descargar JSON",
-                                    data=st.session_state.json_content,
-                                    file_name=st.session_state.json_filename,
+                                    data=json_content,
+                                    file_name=f"PowerBI_Report_{clean_name}.json",
                                     mime="application/json",
-                                    use_container_width=True,
-                                    key="download_json"
+                                    width="stretch",
+                                    use_container_width=True
                                 )
     
                     # Mensaje informativo

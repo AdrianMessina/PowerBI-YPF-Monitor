@@ -48,12 +48,13 @@ class PBIPLoader:
             tab1, tab2 = st.tabs(["📤 Subir Nuevo Proyecto", "📁 Proyectos Guardados"])
 
             with tab1:
-                pbip_path = self._render_upload_tab(key)
+                upload_path = self._render_upload_tab(key)
 
             with tab2:
-                pbip_path = self._render_existing_projects_tab()
+                existing_path = self._render_existing_projects_tab()
 
-            return pbip_path
+            # Priorizar upload (recien subido) sobre existing
+            return upload_path or existing_path
         else:
             # Only upload available (no persistent storage)
             return self._render_upload_tab(key)
@@ -109,19 +110,22 @@ class PBIPLoader:
 
             pbip_path = str(pbip_files[0])
 
-            # Show success message
-            col1, col2 = st.columns([1, 4])
-            with col1:
-                st.success("✅")
-            with col2:
-                st.markdown(f"""
-                <div style="padding: 0.5rem;">
-                    <p style="margin: 0; font-weight: 600; color: #10B981;">Proyecto cargado exitosamente</p>
-                    <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #64748B;">
-                        📊 {pbip_files[0].name}
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
+            # Show success message (unified)
+            st.markdown(f"""
+            <div style="background: rgba(16, 185, 129, 0.10);
+                        border: 1px solid rgba(16, 185, 129, 0.25);
+                        border-left: 4px solid #10B981;
+                        border-radius: 8px;
+                        padding: 0.85rem 1.1rem;
+                        margin: 0.5rem 0;">
+                <p style="margin: 0; font-weight: 600; color: #10B981; font-size: 0.95rem;">
+                    ✅ Proyecto cargado exitosamente
+                </p>
+                <p style="margin: 0.3rem 0 0 0; font-size: 0.85rem; color: #64748B;">
+                    📊 {pbip_files[0].name}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
 
             return pbip_path
 

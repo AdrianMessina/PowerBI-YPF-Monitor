@@ -12,7 +12,13 @@ import uuid
 
 
 def _get_username() -> str:
-    """Get Windows username automatically"""
+    """Get username from authenticated session or system username"""
+    try:
+        import streamlit as st
+        if hasattr(st, 'session_state') and 'username' in st.session_state:
+            return st.session_state.username
+    except:
+        pass
     return os.environ.get('USERNAME', os.environ.get('USER', 'unknown'))
 
 
@@ -31,7 +37,6 @@ class UsageLogger:
         self.suite_name = suite_name
         self.version = version
         self.session_id = str(uuid.uuid4())
-        self.username = _get_username()
         self.hostname = _get_hostname()
         self.logs_dir = Path(__file__).parent.parent / "logs"
         self.logs_dir.mkdir(exist_ok=True)
@@ -50,7 +55,7 @@ class UsageLogger:
         log_entry = {
             'timestamp': datetime.now().isoformat(),
             'session_id': self.session_id,
-            'username': self.username,
+            'username': _get_username(),
             'hostname': self.hostname,
             'suite': self.suite_name,
             'version': self.version,
