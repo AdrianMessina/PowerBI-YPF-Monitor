@@ -243,9 +243,50 @@ class PBIPAnalyzer:
         """Extrae métricas del modelo de datos"""
         model = model_data.get('model', {})
 
-        # Tablas
-        tables = model.get('tables', [])
-        self.metrics['total_tables'] = len(tables)
+        # Tablas - Categorizar con precisión
+        all_tables = model.get('tables', [])
+
+        # Categorizar todas las tablas por tipo
+        tables_by_type = {
+            'user': [],              # Tablas normales de usuario (import/directquery)
+            'calculated': [],        # Tablas calculadas (creadas con DAX)
+            'auto_datetime_template': [],  # Template de Auto Date/Time
+            'auto_datetime_local': [],     # LocalDateTable generadas automáticamente
+            'system_hidden': []      # Otras tablas ocultas del sistema
+        }
+
+        for table in all_tables:
+            table_type = table.get('tableType', 'user')
+            tables_by_type[table_type].append(table)
+
+        # Tablas de usuario = user + calculated (las que el usuario creó)
+        user_tables = tables_by_type['user'] + tables_by_type['calculated']
+
+        # Contar SOLO tablas de usuario (excluyendo automáticas)
+        self.metrics['total_tables'] = len(user_tables)
+
+        # Guardar desglose detallado para debugging y reporte
+        self.metrics['tables_by_type'] = {
+            'user': len(tables_by_type['user']),
+            'calculated': len(tables_by_type['calculated']),
+            'auto_datetime_template': len(tables_by_type['auto_datetime_template']),
+            'auto_datetime_local': len(tables_by_type['auto_datetime_local']),
+            'system_hidden': len(tables_by_type['system_hidden'])
+        }
+
+        # Logging detallado
+        print(f"DEBUG PBIP: Total {len(all_tables)} tablas encontradas en TMDL:")
+        print(f"   ✓ {len(tables_by_type['user'])} tablas de usuario (import/directquery)")
+        print(f"   ✓ {len(tables_by_type['calculated'])} tablas calculadas (DAX)")
+        print(f"   ✗ {len(tables_by_type['auto_datetime_template'])} templates Auto Date/Time (excluidas)")
+        print(f"   ✗ {len(tables_by_type['auto_datetime_local'])} LocalDateTable automáticas (excluidas)")
+        print(f"   ✗ {len(tables_by_type['system_hidden'])} tablas ocultas del sistema (excluidas)")
+        print(f"   → TOTAL CONTABILIZADO: {len(user_tables)} tablas")
+
+        if tables_by_type['auto_datetime_local']:
+            sample_names = [t.get('name', '?')[:35] for t in tables_by_type['auto_datetime_local'][:3]]
+            print(f"   Ejemplos de LocalDateTable excluidas: {', '.join(sample_names)}...")
+
 
         # Medidas DAX
         all_measures = []
@@ -255,9 +296,8 @@ class PBIPAnalyzer:
         calculated_tables = 0
         columns_by_table = {}
 
-        print(f"DEBUG PBIP: Analizando {len(tables)} tablas")
-
-        for table in tables:
+        # Iterar SOLO sobre tablas de usuario
+        for table in user_tables:
             table_name = table.get('name', 'Unknown')
 
             # Contar columnas
@@ -290,13 +330,8 @@ class PBIPAnalyzer:
                         'expression_length': len(str(expr))
                     })
 
-            # Contar tablas calculadas
-            if 'partitions' in table:
-                for partition in table['partitions']:
-                    source = partition.get('source', {})
-                    if source.get('type') == 'calculated' or 'expression' in source:
-                        calculated_tables += 1
-                        break
+        # Usar categorización precisa para tablas calculadas
+        calculated_tables = len(tables_by_type['calculated'])
 
         self.metrics['total_measures'] = len(all_measures)
         self.metrics['measures_by_table'] = measures_by_table
@@ -354,11 +389,11 @@ class PBIPAnalyzer:
 
         self.metrics['auto_date_time_enabled'] = 'Sí' if auto_datetime else 'No'
 
-        # Tamaño del modelo (estimado basado en cantidad de datos)
-        # Esto es solo una estimación ya que el PBIP no contiene los datos
-        estimated_size = len(tables) * 5  # Estimación muy aproximada
-        self.metrics['model_size_mb'] = estimated_size
-        self.metrics['model_size_note'] = 'Estimado (PBIP no contiene datos)'
+        # Tamaño del modelo (NO DISPONIBLE en PBIP)
+        # PBIP es solo metadatos, no contiene datos. El tamaño real está en el servicio.
+        # No intentamos estimar porque sería muy impreciso y confunde al usuario.
+        self.metrics['model_size_mb'] = None
+        self.metrics['model_size_note'] = 'N/A - PBIP contiene solo estructura, no datos. Verifica tamaño en Power BI Service.'
 
     def _analyze_report(self):
         """Analiza el archivo report.json (visualizaciones, páginas)"""

@@ -1,725 +1,804 @@
 """
 YPF BI Monitor - Shared Styles Module
-Design System: Industrial Data Precision
-Typography: Fira Sans (body) + Fira Code (code/DAX)
-Palette: YPF Blue #0451E4 / Slate dark sidebar / Light content
+Design System: Industrial Data Observatory (v3.1)
+Display: Space Grotesk | Body: DM Sans | Data: JetBrains Mono
+Anchor: Diagonal accent slash + noise texture
 """
 import streamlit as st
 from pathlib import Path
 
 
-# Design Tokens (Python access)
-YPF_BLUE = "#0451E4"
-YPF_BLUE_DARK = "#0340B8"
-YPF_BLUE_DEEPER = "#022A8A"
-YPF_BLACK = "#000000"
-YPF_WHITE = "#FFFFFF"
-YPF_GRAY_BG = "#F8FAFC"
-YPF_GRAY_TEXT = "#64748B"
-YPF_TEXT_DARK = "#0F172A"
-YPF_TEXT_SECONDARY = "#475569"
-YPF_BORDER = "#E2E8F0"
-YPF_BORDER_LIGHT = "#F1F5F9"
+# Design tokens (Python-accessible, mirror of CSS vars)
+YPF_ACCENT = "#F2C811"        # YPF Yellow — surgical accent
+YPF_ACCENT_HOVER = "#FFD84A"
+SURFACE_ROOT = "#0B0E14"
+SURFACE_1 = "#111520"
+SURFACE_2 = "#181D2A"
+SURFACE_3 = "#1E2536"
+TEXT_PRIMARY = "#E8ECF4"
+TEXT_SECONDARY = "#8B95A8"
+TEXT_MUTED = "#5A6478"
+BORDER_SUBTLE = "#1A2030"
+BORDER_DEFAULT = "#252D3D"
 
 
 def get_shared_css():
-    """Return the unified YPF corporate CSS - Industrial Data Precision."""
+    """Return Industrial Data Observatory CSS — unified design system for the suite."""
     return """
     <style>
-    /* ============================================================
-       YPF BI Monitor — Industrial Data Precision Design System
-       Aesthetic: Clean technical precision, dark sidebar contrast,
-       subtle depth layers, monochrome + blue accent.
-       Fonts: Fira Sans 300-700 / Fira Code 400-600
-       ============================================================ */
+    /* ═══════════════════════════════════════════════════════════════
+       YPF BI MONITOR — DESIGN SYSTEM v3.1
+       "Industrial Data Observatory"
+       Display: Space Grotesk | Body: DM Sans | Data: JetBrains Mono
+       Anchor: Diagonal accent slash + noise texture
+       ═══════════════════════════════════════════════════════════════ */
 
-    @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-    /* ---- Custom Properties ---- */
+    /* ── DESIGN TOKENS ─────────────────────────────────────────── */
     :root {
-        /* Brand */
-        --blue: #0451E4;
-        --blue-hover: #0340B8;
-        --blue-deep: #022A8A;
-        --blue-glow: rgba(4,81,228,0.14);
-        --blue-subtle: rgba(4,81,228,0.05);
+        --brand-accent: #F2C811;
+        --brand-accent-hover: #FFD84A;
+        --brand-accent-muted: rgba(242, 200, 17, 0.12);
+        --brand-accent-glow: rgba(242, 200, 17, 0.25);
 
-        /* Surfaces */
-        --surface-0: #FFFFFF;
-        --surface-1: #F8FAFC;
-        --surface-2: #F1F5F9;
-        --surface-3: #E2E8F0;
-        --dark-0: #0B1120;
-        --dark-1: #0F172A;
-        --dark-2: #1E293B;
-        --dark-3: #334155;
+        --surface-root: #0B0E14;
+        --surface-1: #111520;
+        --surface-2: #181D2A;
+        --surface-3: #1E2536;
+        --surface-4: #252D3D;
+        --surface-raised: #2C3548;
 
-        /* Text */
-        --ink: #0F172A;
-        --ink-2: #1E293B;
-        --ink-3: #4B5563;
-        --ink-4: #6B7280;
-        --ink-on-dark: #CBD5E1;
-        --ink-white: #F1F5F9;
+        --glass-bg: rgba(255, 255, 255, 0.04);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --glass-hover: rgba(255, 255, 255, 0.07);
 
-        /* Borders */
-        --line: #E2E8F0;
-        --line-light: #F1F5F9;
-        --line-dark: rgba(255,255,255,0.07);
+        --text-primary: #E8ECF4;
+        --text-secondary: #8B95A8;
+        --text-muted: #5A6478;
+        --text-inverse: #0B0E14;
 
-        /* Status */
-        --green: #059669;
-        --amber: #D97706;
-        --red: #DC2626;
-        --cyan: #0891B2;
+        --status-ok: #10B981;
+        --status-ok-bg: rgba(16, 185, 129, 0.10);
+        --status-warn: #F59E0B;
+        --status-warn-bg: rgba(245, 158, 11, 0.10);
+        --status-danger: #D13438;
+        --status-danger-bg: rgba(209, 52, 56, 0.10);
+        --status-info: #0078D4;
+        --status-info-bg: rgba(0, 120, 212, 0.10);
 
-        /* Radii */
-        --r-sm: 6px;
-        --r-md: 8px;
-        --r-lg: 12px;
-        --r-xl: 16px;
-        --r-full: 9999px;
+        --cat-report: #3B82F6;
+        --cat-report-dim: rgba(59, 130, 246, 0.12);
+        --cat-model: #8B5CF6;
+        --cat-model-dim: rgba(139, 92, 246, 0.12);
+        --cat-bpa: #10B981;
+        --cat-bpa-dim: rgba(16, 185, 129, 0.12);
 
-        /* Shadows */
-        --sh-xs: 0 1px 2px rgba(0,0,0,0.04);
-        --sh-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-        --sh-md: 0 4px 12px rgba(0,0,0,0.07);
-        --sh-lg: 0 10px 28px rgba(0,0,0,0.10);
-        --sh-blue: 0 4px 20px rgba(4,81,228,0.15);
-        --sh-card-hover: 0 8px 24px rgba(4,81,228,0.10), 0 2px 8px rgba(0,0,0,0.06);
+        --border-subtle: #1A2030;
+        --border-default: #252D3D;
+        --border-strong: #354155;
+        --border-accent: rgba(242, 200, 17, 0.35);
 
-        /* Motion */
-        --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        --t-fast: 120ms;
-        --t-norm: 200ms;
-        --t-slow: 320ms;
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+        --shadow-md: 0 4px 12px rgba(0,0,0,0.35);
+        --shadow-lg: 0 8px 32px rgba(0,0,0,0.45);
+        --shadow-glow: 0 0 24px var(--brand-accent-glow);
 
-        /* Fonts */
-        --sans: 'Fira Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        --mono: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+        --radius-sm: 6px;
+        --radius-md: 10px;
+        --radius-lg: 14px;
+        --radius-xl: 20px;
+        --radius-full: 9999px;
+
+        --font-display: 'Space Grotesk', 'DM Sans', system-ui, sans-serif;
+        --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
+        --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --duration-fast: 150ms;
+        --duration-normal: 200ms;
+        --duration-slow: 350ms;
     }
 
-    /* ---- Reduced Motion ---- */
-    @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after {
-            animation-duration: 0.01ms !important;
-            transition-duration: 0.01ms !important;
-        }
+    /* ── GLOBAL RESETS ──────────────────────────────────────────── */
+    *:not([data-testid="stIconMaterial"]):not(.material-symbols-rounded):not(.material-symbols-outlined):not(.material-icons) {
+        font-family: var(--font-body) !important;
     }
 
-    /* ---- Base Typography ---- */
-    html, body, [class*="css"] {
-        font-family: var(--sans) !important;
-        color: var(--ink);
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
+    [data-testid="stIconMaterial"],
+    .material-symbols-rounded,
+    .material-symbols-outlined,
+    .material-icons {
+        font-family: 'Material Symbols Rounded', 'Material Symbols Outlined', 'Material Icons' !important;
     }
-    code, pre, .stCodeBlock, [data-testid="stCode"] {
-        font-family: var(--mono) !important;
-    }
-    h1, h2, h3, h4, h5, h6 {
-        font-family: var(--sans) !important;
-        color: var(--ink);
-        letter-spacing: -0.025em;
-        line-height: 1.25;
-    }
-    h1 { font-weight: 700; font-size: 1.6rem; }
-    h2 { font-weight: 600; font-size: 1.2rem; }
-    h3 { font-weight: 600; font-size: 1.05rem; }
-    p  { line-height: 1.65; color: var(--ink-2); font-size: 0.92rem; }
-    li { line-height: 1.65; color: var(--ink-2); font-size: 0.88rem; }
-    strong { color: var(--ink); }
 
-    /* ============================================================
-       HEADER
-       ============================================================ */
+    html, body, [data-testid="stAppViewContainer"],
+    .main, [data-testid="stApp"] {
+        background: var(--surface-root) !important;
+        color: var(--text-primary);
+    }
+
+    /* Subtle grid background texture */
+    [data-testid="stAppViewContainer"]::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background-image:
+            linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+        background-size: 64px 64px;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    /* Noise grain overlay */
+    [data-testid="stAppViewContainer"]::after {
+        content: '';
+        position: fixed;
+        inset: 0;
+        opacity: 0.025;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    /* Hide Streamlit chrome */
+    #MainMenu, footer, .stDeployButton { display: none !important; }
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+        background: var(--surface-raised);
+        border-radius: var(--radius-full);
+    }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+    /* ── MAIN CONTAINER ────────────────────────────────────────── */
+    .main .block-container {
+        max-width: 1400px;
+        padding: 2rem 2.5rem !important;
+    }
+
+    /* ── APP HEADER (.ypf-header) ──────────────────────────────── */
     .ypf-header {
-        background: var(--dark-1);
-        padding: 1.25rem 1.75rem 1rem;
-        border-radius: var(--r-lg);
-        margin-bottom: 1.25rem;
+        background: var(--surface-2);
+        padding: 2rem 2.5rem;
+        border-radius: var(--radius-lg);
+        margin-bottom: 1.75rem;
+        border: 1px solid var(--border-subtle);
+        border-left: 3px solid var(--brand-accent);
         position: relative;
         overflow: hidden;
     }
-    /* Blue accent line across the top */
-    .ypf-header::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, var(--blue) 0%, var(--blue-hover) 40%, transparent 80%);
-    }
-    /* Subtle grid texture */
+
+    /* DIFFERENTIATION ANCHOR — diagonal accent slash */
     .ypf-header::after {
         content: '';
         position: absolute;
-        inset: 0;
-        background-image:
-            linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-        background-size: 32px 32px;
+        top: -20px;
+        right: -20px;
+        width: 120px;
+        height: 120px;
+        background: var(--brand-accent);
+        opacity: 0.06;
+        transform: rotate(45deg);
         pointer-events: none;
     }
+
+    .ypf-header::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0;
+        width: 160px; height: 100%;
+        background: linear-gradient(90deg, var(--brand-accent-muted), transparent);
+        pointer-events: none;
+    }
+
     .ypf-header h1 {
-        color: var(--ink-white);
-        font-size: 1.3rem;
+        color: var(--text-primary) !important;
+        font-family: var(--font-display) !important;
+        font-size: 1.75rem;
         font-weight: 700;
         margin: 0;
-        letter-spacing: -0.03em;
+        letter-spacing: -0.04em;
         position: relative;
         z-index: 1;
     }
+
     .ypf-header .subtitle {
-        color: var(--ink-on-dark);
-        font-size: 0.88rem;
-        margin: 0.35rem 0 0 0;
+        color: var(--text-secondary);
+        margin: 0.5rem 0 0 0;
+        font-size: 0.9rem;
         font-weight: 400;
         position: relative;
         z-index: 1;
     }
+
     .ypf-header .version {
         display: inline-block;
-        color: var(--blue);
-        font-size: 0.65rem;
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        background: rgba(4,81,228,0.12);
-        padding: 0.2rem 0.65rem;
-        border-radius: var(--r-full);
-        margin-top: 0.6rem;
+        font-family: var(--font-mono) !important;
+        color: var(--brand-accent);
+        font-size: 0.7rem;
+        margin: 0.6rem 0 0 0;
+        padding: 0.15rem 0.5rem;
+        background: var(--brand-accent-muted);
+        border-radius: var(--radius-sm);
+        border: 1px solid rgba(242,200,17,0.18);
         position: relative;
         z-index: 1;
     }
 
-    /* ============================================================
-       SECTION HEADERS
-       ============================================================ */
+    /* ── SECTION HEADERS ───────────────────────────────────────── */
     .section-header {
-        background: var(--surface-1);
-        border-left: 3px solid var(--blue);
-        padding: 0.55rem 1rem;
+        background: var(--surface-2);
+        border-left: 3px solid var(--brand-accent);
+        padding: 0.6rem 1rem;
         font-weight: 600;
-        font-size: 0.88rem;
-        color: var(--ink);
-        margin: 1.25rem 0 0.65rem 0;
-        border-radius: 0 var(--r-sm) var(--r-sm) 0;
+        margin: 1.25rem 0 0.75rem 0;
+        border-radius: 0 var(--radius-md) var(--radius-md) 0;
+        font-size: 0.9rem;
+        color: var(--text-primary) !important;
+        font-family: var(--font-display) !important;
+        letter-spacing: -0.01em;
     }
 
-    /* ============================================================
-       HELP / INFO BOXES
-       ============================================================ */
+    /* ── HELP / INFO BOXES ─────────────────────────────────────── */
     .help-box {
-        background: var(--blue-subtle);
-        border-left: 3px solid var(--blue);
+        background: var(--surface-2);
+        border-left: 3px solid var(--brand-accent);
         padding: 1rem 1.25rem;
-        border-radius: 0 var(--r-sm) var(--r-sm) 0;
+        border-radius: 0 var(--radius-md) var(--radius-md) 0;
         margin: 0.75rem 0;
+        color: var(--text-secondary);
+        border-top: 1px solid var(--border-subtle);
+        border-right: 1px solid var(--border-subtle);
+        border-bottom: 1px solid var(--border-subtle);
     }
-    .help-box h4 {
-        font-size: 0.88rem;
-        margin: 0 0 0.4rem 0;
-        color: var(--ink);
-    }
-    .help-box ul { margin: 0; padding-left: 1.15rem; }
-    .help-box li { font-size: 0.84rem; margin-bottom: 0.2rem; }
 
-    /* ============================================================
-       BUTTONS
-       ============================================================ */
-    .stButton > button,
-    .stDownloadButton > button {
-        background: var(--blue) !important;
-        color: white !important;
+    /* ── BUTTONS ────────────────────────────────────────────────── */
+    .stButton > button {
+        background: var(--brand-accent) !important;
+        color: var(--text-inverse) !important;
         border: none !important;
-        border-radius: var(--r-sm) !important;
+        border-radius: var(--radius-md) !important;
         font-weight: 600 !important;
-        font-family: var(--sans) !important;
-        font-size: 0.87rem !important;
-        letter-spacing: 0.01em !important;
-        padding: 0.5rem 1.25rem !important;
-        transition: background var(--t-norm) var(--ease),
-                    box-shadow var(--t-norm) var(--ease),
-                    transform var(--t-fast) var(--ease) !important;
+        font-size: 0.85rem !important;
+        padding: 0.6rem 1.4rem !important;
+        transition: all var(--duration-normal) var(--ease-out) !important;
         cursor: pointer !important;
+        letter-spacing: -0.01em;
+        min-height: 44px !important;
     }
-    .stButton > button:hover,
-    .stDownloadButton > button:hover {
-        background: var(--blue-hover) !important;
-        box-shadow: var(--sh-blue) !important;
+    .stButton > button:hover {
+        background: var(--brand-accent-hover) !important;
+        box-shadow: var(--shadow-glow) !important;
         transform: translateY(-1px) !important;
     }
-    .stButton > button:active,
-    .stDownloadButton > button:active {
+    .stButton > button:active {
         transform: translateY(0) !important;
-        box-shadow: var(--sh-xs) !important;
     }
-    /* Focus ring */
-    .stButton > button:focus-visible,
-    .stDownloadButton > button:focus-visible {
-        outline: 2px solid var(--blue) !important;
-        outline-offset: 2px !important;
+    .stButton > button[kind="secondary"] {
+        background: transparent !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--border-default) !important;
+    }
+    .stButton > button[kind="secondary"]:hover {
+        border-color: var(--brand-accent) !important;
+        background: var(--brand-accent-muted) !important;
+        color: var(--brand-accent) !important;
     }
 
-    /* ============================================================
-       EXPANDERS
-       ============================================================ */
-    .streamlit-expanderHeader {
-        font-weight: 600;
-        font-size: 0.9rem;
-        color: var(--ink);
+    /* ── DOWNLOAD BUTTON ──────────────────────────────────────── */
+    .stDownloadButton > button {
+        background: var(--surface-3) !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--border-default) !important;
+        border-radius: var(--radius-md) !important;
+        font-weight: 500 !important;
+        transition: all var(--duration-normal) var(--ease-out) !important;
         cursor: pointer !important;
-        transition: color var(--t-fast) var(--ease);
+        min-height: 44px !important;
     }
-    .streamlit-expanderHeader:hover { color: var(--blue); }
+    .stDownloadButton > button:hover {
+        border-color: var(--brand-accent) !important;
+        background: var(--brand-accent-muted) !important;
+        color: var(--brand-accent) !important;
+    }
 
-    /* ============================================================
-       METRIC CARDS
-       ============================================================ */
-    [data-testid="stMetric"] {
-        background: var(--surface-0);
-        border: 1px solid var(--line);
-        border-radius: var(--r-md);
-        padding: 1rem 1.2rem;
-        box-shadow: var(--sh-xs);
-        transition: box-shadow var(--t-norm) var(--ease),
-                    border-color var(--t-norm) var(--ease);
-        position: relative;
+    /* ── EXPANDERS ──────────────────────────────────────────────── */
+    [data-testid="stExpander"] {
+        background: var(--surface-2);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md) !important;
         overflow: hidden;
+        margin-bottom: 0.5rem;
     }
-    [data-testid="stMetric"]::after {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; bottom: 0;
-        width: 3px;
-        background: var(--blue);
+    [data-testid="stExpander"] summary {
+        color: var(--text-primary) !important;
+        font-weight: 600;
+        padding: 0.75rem 1rem;
+    }
+    [data-testid="stExpander"] summary:hover {
+        background: var(--glass-hover);
+    }
+    .streamlit-expanderHeader {
+        font-weight: 600 !important;
+        color: var(--text-primary) !important;
+        cursor: pointer !important;
+        transition: color var(--duration-normal) var(--ease-out) !important;
+    }
+    .streamlit-expanderHeader:hover {
+        color: var(--brand-accent) !important;
+    }
+
+    /* ── METRIC CARDS ──────────────────────────────────────────── */
+    [data-testid="stMetric"] {
+        background: var(--surface-2);
+        border: 1px solid var(--border-subtle);
+        border-left: 3px solid var(--brand-accent);
+        border-radius: var(--radius-md);
+        padding: 1rem 1.25rem;
+        transition: all var(--duration-normal) var(--ease-out);
     }
     [data-testid="stMetric"]:hover {
-        box-shadow: var(--sh-blue);
-        border-color: rgba(4,81,228,0.18);
+        border-color: var(--border-accent);
+        border-left-color: var(--brand-accent);
+        box-shadow: var(--shadow-md);
     }
     [data-testid="stMetricValue"] {
-        color: var(--blue) !important;
-        font-weight: 700 !important;
-        font-family: var(--sans) !important;
-        font-size: 1.45rem !important;
-        letter-spacing: -0.02em !important;
+        font-family: var(--font-mono) !important;
+        font-weight: 600 !important;
+        color: var(--brand-accent) !important;
+        font-size: 1.6rem !important;
     }
     [data-testid="stMetricLabel"] {
-        color: var(--ink-3) !important;
+        font-size: 0.72rem !important;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted) !important;
         font-weight: 500 !important;
+    }
+    [data-testid="stMetricDelta"] {
+        font-size: 0.8rem !important;
+    }
+
+    /* ── DATAFRAMES ────────────────────────────────────────────── */
+    .stDataFrame, [data-testid="stDataFrame"] {
+        border-radius: var(--radius-lg) !important;
+        overflow: hidden;
+        border: 1px solid var(--border-default) !important;
+    }
+    .stDataFrame table, .stTable table {
+        font-size: 0.85rem;
+        background: var(--surface-1) !important;
+    }
+    .stDataFrame thead th, .stTable thead th,
+    [data-testid="stDataFrame"] th {
+        background: var(--surface-3) !important;
+        color: var(--text-secondary) !important;
+        font-weight: 600 !important;
+        text-transform: uppercase;
+        font-size: 0.7rem !important;
+        letter-spacing: 0.06em;
+        border-bottom: 1px solid var(--border-default) !important;
+    }
+    .stDataFrame tbody td, .stTable tbody td {
+        background: var(--surface-1) !important;
+        color: var(--text-primary) !important;
+        border-bottom: 1px solid var(--border-subtle) !important;
+    }
+    .stDataFrame tbody tr:hover td, .stTable tbody tr:hover td,
+    [data-testid="stDataFrame"] tr:hover td {
+        background: var(--surface-2) !important;
+    }
+    [data-testid="stDataFrame"] [role="columnheader"] {
+        font-family: var(--font-body) !important;
         font-size: 0.72rem !important;
         text-transform: uppercase;
         letter-spacing: 0.06em;
     }
-    [data-testid="stMetricDelta"] {
-        font-size: 0.75rem !important;
-    }
 
-    /* ============================================================
-       DATA TABLES
-       ============================================================ */
-    [data-testid="stDataFrame"] table {
-        font-family: var(--sans) !important;
-        font-size: 0.84rem;
+    /* ── TABS ──────────────────────────────────────────────────── */
+    .stTabs {
+        background: transparent;
+        border-radius: 0;
+        padding: 0;
+        box-shadow: none;
+        margin-bottom: 1.5rem;
     }
-    [data-testid="stDataFrame"] th {
-        background: var(--dark-1) !important;
-        color: white !important;
-        font-weight: 600 !important;
-        font-size: 0.72rem !important;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        padding: 0.6rem 0.75rem !important;
-    }
-    [data-testid="stDataFrame"] td {
-        padding: 0.5rem 0.75rem !important;
-        border-bottom: 1px solid var(--line-light) !important;
-    }
-    [data-testid="stDataFrame"] tr:hover td {
-        background: var(--blue-subtle) !important;
-    }
-
-    /* ============================================================
-       TABS
-       ============================================================ */
     .stTabs [data-baseweb="tab-list"] {
         gap: 0;
-        border-bottom: 1px solid var(--line);
+        background: var(--surface-1);
+        border-radius: var(--radius-lg);
+        padding: 4px;
+        border: 1px solid var(--border-subtle);
     }
     .stTabs [data-baseweb="tab"] {
-        font-family: var(--sans) !important;
-        font-weight: 500;
-        font-size: 0.86rem;
-        color: var(--ink-4);
-        padding: 0.65rem 1.2rem;
-        transition: color var(--t-fast) var(--ease),
-                    background var(--t-fast) var(--ease);
+        background: transparent;
+        border-radius: var(--radius-md);
+        color: var(--text-muted) !important;
+        font-weight: 500 !important;
+        font-size: 0.85rem !important;
+        padding: 0.65rem 1.25rem;
+        transition: all var(--duration-normal) var(--ease-out);
+        border: none !important;
         cursor: pointer;
-        border-bottom: 2px solid transparent;
-        margin-bottom: -1px;
     }
     .stTabs [data-baseweb="tab"]:hover {
-        color: var(--blue);
-        background: var(--blue-subtle);
+        color: var(--text-primary) !important;
+        background: var(--glass-hover);
     }
+    .stTabs [data-baseweb="tab"][aria-selected="true"],
     .stTabs [aria-selected="true"] {
-        color: var(--blue) !important;
-        font-weight: 600;
-        border-bottom-color: var(--blue) !important;
+        background: var(--brand-accent) !important;
+        color: var(--text-inverse) !important;
+        font-weight: 600 !important;
+        box-shadow: var(--shadow-sm);
+        border-bottom: none !important;
+    }
+    .stTabs [data-baseweb="tab-border"],
+    .stTabs [data-baseweb="tab-highlight"] {
+        display: none !important;
     }
 
-    /* ============================================================
-       FORM INPUTS
-       ============================================================ */
+    /* ── TEXT INPUTS ────────────────────────────────────────────── */
     .stTextInput > div > div > input,
     .stTextArea > div > div > textarea {
-        font-family: var(--sans) !important;
-        font-size: 0.9rem;
-        border: 1px solid var(--line);
-        border-radius: var(--r-sm);
-        transition: border-color var(--t-fast) var(--ease),
-                    box-shadow var(--t-fast) var(--ease);
+        background: var(--surface-2) !important;
+        border: 1px solid var(--border-default) !important;
+        border-radius: var(--radius-md) !important;
+        color: var(--text-primary) !important;
+        font-size: 0.9rem !important;
+        padding: 0.7rem 1rem !important;
+        transition: all var(--duration-normal) var(--ease-out);
     }
     .stTextInput > div > div > input:focus,
     .stTextArea > div > div > textarea:focus {
-        border-color: var(--blue) !important;
-        box-shadow: 0 0 0 3px var(--blue-glow) !important;
+        border-color: var(--brand-accent) !important;
+        box-shadow: 0 0 0 3px var(--brand-accent-muted) !important;
+        background: var(--surface-3) !important;
     }
-    .stSelectbox [data-baseweb="select"] {
-        font-family: var(--sans) !important;
-        cursor: pointer;
+    .stTextInput > div > div > input::placeholder {
+        color: var(--text-muted) !important;
     }
-    .stSelectbox [data-baseweb="select"] > div {
-        border-radius: var(--r-sm);
-        transition: border-color var(--t-fast) var(--ease);
-    }
-    .stRadio [data-baseweb="radio"],
-    .stCheckbox { cursor: pointer !important; }
 
-    /* ============================================================
-       FEATURE CARDS (Home)
-       ============================================================ */
+    /* ── SELECTBOX / MULTISELECT ──────────────────────────────── */
+    [data-baseweb="select"] > div {
+        background: var(--surface-2) !important;
+        border-color: var(--border-default) !important;
+        border-radius: var(--radius-md) !important;
+        color: var(--text-primary) !important;
+    }
+    [data-baseweb="select"] > div:focus-within {
+        border-color: var(--brand-accent) !important;
+        box-shadow: 0 0 0 3px var(--brand-accent-muted) !important;
+    }
+    [data-baseweb="popover"] > div {
+        background: var(--surface-3) !important;
+        border: 1px solid var(--border-default) !important;
+        border-radius: var(--radius-md) !important;
+    }
+    [data-baseweb="menu"] li {
+        color: var(--text-primary) !important;
+    }
+    [data-baseweb="menu"] li:hover {
+        background: var(--glass-hover) !important;
+    }
+
+    /* ── RADIO / CHECKBOX ─────────────────────────────────────── */
+    .stRadio [data-baseweb="radio"] {
+        cursor: pointer !important;
+    }
+    .stCheckbox label {
+        color: var(--text-secondary) !important;
+    }
+    .stCheckbox [data-baseweb="checkbox"] div {
+        border-color: var(--border-default) !important;
+    }
+
+    /* ── ALERTS ─────────────────────────────────────────────────── */
+    .stAlert {
+        border-radius: var(--radius-md) !important;
+        border-left-width: 3px !important;
+        border-color: var(--border-subtle) !important;
+        background: var(--surface-2) !important;
+        color: var(--text-primary) !important;
+    }
+    div[data-baseweb="notification"] {
+        border-radius: var(--radius-md);
+        background: var(--surface-2) !important;
+    }
+
+    /* ── DIVIDERS ───────────────────────────────────────────────── */
+    hr {
+        border: none;
+        height: 1px;
+        background: var(--border-subtle);
+        margin: 1.5rem 0;
+    }
+
+    /* ── FEATURE CARDS (.feature-card) ─────────────────────────── */
     .feature-card {
-        background: var(--surface-0);
-        border: 1px solid var(--line);
-        padding: 1rem 1.25rem 0.85rem;
-        border-radius: var(--r-md);
-        box-shadow: var(--sh-xs);
-        margin: 0.35rem 0;
-        transition: box-shadow var(--t-norm) var(--ease),
-                    border-color var(--t-norm) var(--ease),
-                    transform var(--t-norm) var(--ease);
+        background: var(--surface-2);
+        padding: 1.5rem;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-default);
+        border-left: 3px solid var(--brand-accent);
+        transition: all 0.25s var(--ease-out);
         cursor: default;
         position: relative;
+        overflow: hidden;
+        margin: 0.5rem 0;
     }
     .feature-card::before {
         content: '';
         position: absolute;
-        top: 0; left: 0; bottom: 0;
-        width: 3px;
-        background: var(--blue);
-        border-radius: var(--r-md) 0 0 var(--r-md);
-        opacity: 0.6;
-        transition: opacity var(--t-norm) var(--ease);
+        top: 0; left: 0;
+        width: 3px; height: 100%;
+        background: var(--brand-accent);
+        opacity: 0;
+        transition: opacity 0.25s;
     }
     .feature-card:hover {
-        box-shadow: var(--sh-card-hover);
-        border-color: rgba(4,81,228,0.12);
-        transform: translateY(-2px);
+        background: var(--surface-3);
+        border-color: var(--brand-accent);
+        transform: translateX(2px);
+        box-shadow: var(--shadow-md);
     }
     .feature-card:hover::before { opacity: 1; }
-    .feature-card .card-icon {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 40px; height: 40px;
-        border-radius: var(--r-sm);
-        background: var(--blue-subtle);
-        border: 1px solid rgba(4,81,228,0.08);
-        margin-bottom: 0.5rem;
-        font-size: 1.5rem;
-        line-height: 1;
-    }
     .feature-card h3 {
-        color: var(--ink);
-        font-size: 0.98rem;
+        color: var(--text-primary) !important;
+        font-family: var(--font-display) !important;
+        font-size: 1.05rem;
         font-weight: 600;
-        margin: 0 0 0.35rem 0;
-        letter-spacing: -0.015em;
+        margin: 0 0 0.5rem 0;
+        letter-spacing: -0.02em;
+    }
+    .feature-card h4 {
+        color: var(--text-primary) !important;
+        font-family: var(--font-display) !important;
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin: 0 0 0.4rem 0;
     }
     .feature-card p {
-        color: var(--ink-3);
-        font-size: 0.82rem;
+        color: var(--text-secondary) !important;
+        font-size: 0.85rem;
+        line-height: 1.6;
         margin: 0;
-        line-height: 1.55;
     }
     .feature-card ul {
-        color: var(--ink-3);
-        font-size: 0.78rem;
-        margin: 0.35rem 0 0 0;
-        padding-left: 1rem;
-        line-height: 1.55;
+        color: var(--text-secondary);
+        font-size: 0.82rem;
+        margin: 0.5rem 0 0 0;
+        padding-left: 1.2rem;
+        line-height: 1.7;
     }
-    .feature-card li::marker { color: var(--blue); }
-
-    /* ============================================================
-       HOME HERO STATS
-       ============================================================ */
-    .hero-stat {
-        text-align: center;
-        padding: 1rem 0.5rem;
-    }
-    .hero-stat .stat-value {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--blue);
-        letter-spacing: -0.03em;
-        line-height: 1;
-    }
-    .hero-stat .stat-label {
-        font-size: 0.72rem;
-        font-weight: 500;
-        color: var(--ink-4);
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        margin-top: 0.35rem;
+    .feature-card ul li {
+        color: var(--text-secondary);
     }
 
-    /* ============================================================
-       PBIP INPUT SECTION
-       ============================================================ */
+    /* ── PBIP INPUT SECTION ────────────────────────────────────── */
     .pbip-input-section {
-        background: var(--blue-subtle);
-        border: 1px solid var(--line);
-        border-left: 3px solid var(--blue);
-        border-radius: 0 var(--r-md) var(--r-md) 0;
-        padding: 1rem;
+        background: var(--surface-2);
+        border: 1px solid var(--border-subtle);
+        border-left: 3px solid var(--brand-accent);
+        border-radius: 0 var(--radius-md) var(--radius-md) 0;
+        padding: 1rem 1.25rem;
         margin: 1rem 0;
     }
 
-    /* ============================================================
-       LOADER + SKELETON
-       ============================================================ */
+    /* ── FOOTER ─────────────────────────────────────────────────── */
+    .ypf-footer {
+        text-align: center;
+        color: var(--text-muted) !important;
+        font-size: 0.72rem;
+        font-family: var(--font-body);
+        border-top: 1px solid var(--border-subtle);
+        padding-top: 1rem;
+        margin-top: 2.5rem;
+        letter-spacing: 0.03em;
+    }
+
+    /* ── LOADER ─────────────────────────────────────────────────── */
     .ypf-loader-container {
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 2.5rem;
+        padding: 2rem;
     }
     .ypf-loader {
-        width: 36px; height: 36px;
-        border: 3px solid var(--line);
-        border-top-color: var(--blue);
+        width: 50px;
+        height: 50px;
+        border: 3px solid var(--surface-3);
+        border-top: 3px solid var(--brand-accent);
         border-radius: 50%;
-        animation: ypf-spin 0.75s linear infinite;
+        animation: ypf-spin 1s linear infinite;
     }
     @keyframes ypf-spin {
-        to { transform: rotate(360deg); }
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
     .ypf-loader-text {
-        color: var(--ink-4);
-        margin-top: 0.75rem;
-        font-size: 0.84rem;
+        color: var(--text-secondary);
+        margin-top: 1rem;
+        font-size: 0.9rem;
+    }
+    .stSpinner > div {
+        border-color: var(--brand-accent) transparent transparent transparent !important;
     }
 
+    /* ── SKELETON ──────────────────────────────────────────────── */
     .skeleton {
-        background: linear-gradient(90deg, var(--line) 25%, var(--surface-2) 50%, var(--line) 75%);
+        background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
         background-size: 200% 100%;
-        animation: sk-pulse 1.5s ease-in-out infinite;
-        border-radius: var(--r-sm);
-        height: 0.9rem;
-        margin: 0.45rem 0;
+        animation: skeleton-pulse 1.5s ease-in-out infinite;
+        border-radius: var(--radius-sm);
+        height: 1rem;
+        margin: 0.5rem 0;
     }
     .skeleton-card {
-        background: var(--surface-0);
-        border: 1px solid var(--line);
-        border-radius: var(--r-md);
+        background: var(--surface-2);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
         padding: 1.5rem;
-        box-shadow: var(--sh-xs);
     }
-    .skeleton-card .skeleton-title { height: 1.3rem; width: 55%; margin-bottom: 0.9rem; }
-    .skeleton-card .skeleton-text { width: 85%; }
-    .skeleton-card .skeleton-text:last-child { width: 60%; }
-    @keyframes sk-pulse {
+    .skeleton-card .skeleton-title {
+        height: 1.4rem;
+        width: 60%;
+        margin-bottom: 1rem;
+    }
+    .skeleton-card .skeleton-text {
+        height: 0.9rem;
+        width: 90%;
+        margin-bottom: 0.5rem;
+    }
+    .skeleton-card .skeleton-text:last-child {
+        width: 70%;
+    }
+    @keyframes skeleton-pulse {
         0% { background-position: 200% 0; }
         100% { background-position: -200% 0; }
     }
 
-    /* ============================================================
-       STATUS DOTS
-       ============================================================ */
+    /* ── STATUS DOTS ───────────────────────────────────────────── */
     .status-dot {
         display: inline-block;
-        width: 7px; height: 7px;
+        width: 8px;
+        height: 8px;
         border-radius: 50%;
         margin-right: 6px;
+        vertical-align: middle;
     }
-    .status-dot.active  { background: var(--green); }
-    .status-dot.warning { background: var(--amber); }
-    .status-dot.error   { background: var(--red); }
+    .status-dot.active, .status-dot.ok { background: var(--status-ok); box-shadow: 0 0 6px rgba(16,185,129,0.5); }
+    .status-dot.warning, .status-dot.warn { background: var(--status-warn); box-shadow: 0 0 6px rgba(245,158,11,0.4); }
+    .status-dot.error, .status-dot.danger { background: var(--status-danger); }
 
-    /* ============================================================
-       MISC
-       ============================================================ */
-    hr {
-        border: none;
-        border-top: 1px solid var(--line);
-        margin: 1.5rem 0;
-    }
-
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
-
-    .ypf-footer {
-        text-align: center;
-        color: var(--ink-3);
-        font-size: 0.7rem;
-        border-top: 1px solid var(--line);
-        padding-top: 0.75rem;
-        margin-top: 2rem;
-        font-family: var(--sans);
-        letter-spacing: 0.015em;
+    /* ── TYPOGRAPHY (Headings + Text) ──────────────────────────── */
+    h1, h2, h3, h4, h5, h6 {
+        color: var(--text-primary) !important;
+        font-family: var(--font-display) !important;
+        letter-spacing: -0.03em;
     }
 
-    .stProgress > div > div > div {
-        background: var(--blue) !important;
+    .stMarkdown p,
+    .stMarkdown li {
+        color: var(--text-secondary) !important;
+    }
+    .stMarkdown h4, .stMarkdown h3, .stMarkdown h2, .stMarkdown h1 {
+        color: var(--text-primary) !important;
+        font-family: var(--font-display) !important;
+    }
+    .stMarkdown strong {
+        color: var(--text-primary) !important;
+        font-weight: 600;
+    }
+    .stMarkdown code {
+        background: var(--surface-3) !important;
+        color: var(--brand-accent) !important;
+        padding: 0.15rem 0.4rem;
+        border-radius: var(--radius-sm);
+        font-family: var(--font-mono) !important;
+        font-size: 0.85em;
     }
 
-    .stAlert {
-        border-radius: var(--r-md) !important;
-        font-family: var(--sans) !important;
-        font-size: 0.87rem !important;
+    code, pre, .stCodeBlock, [data-testid="stCode"] {
+        font-family: var(--font-mono) !important;
     }
 
-    /* ============================================================
-       SCROLL-DRIVEN ANIMATIONS (CSS native)
-       Uses animation-timeline: view() for viewport-triggered reveals.
-       Graceful degradation: elements visible by default,
-       animations enhance only on supported browsers.
-       ============================================================ */
-
-    /* Keyframes */
-    @keyframes scroll-fade-up {
-        from {
-            opacity: 0;
-            transform: translateY(24px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    /* Captions */
+    .stCaption, [data-testid="stCaptionContainer"] {
+        color: var(--text-muted) !important;
     }
 
-    @keyframes scroll-fade-in {
-        from { opacity: 0; }
-        to   { opacity: 1; }
+    /* ── BADGES ─────────────────────────────────────────────────── */
+    .badge {
+        display: inline-block;
+        padding: 0.2rem 0.65rem;
+        border-radius: var(--radius-full);
+        font-size: 0.68rem;
+        font-weight: 600;
+        margin-right: 0.4rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border: 1px solid transparent;
+    }
+    .badge-accent {
+        background: var(--brand-accent-muted);
+        color: var(--brand-accent);
+        border-color: rgba(242, 200, 17, 0.2);
     }
 
-    @keyframes scroll-scale-in {
-        from {
-            opacity: 0;
-            transform: scale(0.96);
-        }
-        to {
-            opacity: 1;
-            transform: scale(1);
-        }
+    /* ── CHARTS (Plotly) ──────────────────────────────────────── */
+    .js-plotly-plot {
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+    }
+    .js-plotly-plot .main-svg {
+        background: transparent !important;
+    }
+    .modebar-btn path { fill: var(--text-muted) !important; }
+    .modebar-btn:hover path { fill: var(--brand-accent) !important; }
+
+    /* ── PROGRESS BARS ─────────────────────────────────────────── */
+    [data-testid="stProgress"] > div > div {
+        background: var(--brand-accent) !important;
     }
 
-    /* Apply to elements only when scroll-timeline is supported */
-    @supports (animation-timeline: view()) {
-
-        /* Feature cards: slide up as they enter viewport */
-        .feature-card {
-            animation: scroll-fade-up linear both;
-            animation-timeline: view();
-            animation-range: entry 0% entry 35%;
-        }
-
-        /* Hero stats: fade in */
-        .hero-stat {
-            animation: scroll-fade-up linear both;
-            animation-timeline: view();
-            animation-range: entry 0% entry 30%;
-        }
-
-        /* Metric cards: scale in */
-        [data-testid="stMetric"] {
-            animation: scroll-scale-in linear both;
-            animation-timeline: view();
-            animation-range: entry 0% entry 30%;
-        }
-
-        /* Header: subtle fade */
-        .ypf-header {
-            animation: scroll-fade-in linear both;
-            animation-timeline: view();
-            animation-range: entry 0% entry 20%;
-        }
-
-        /* Section headers: slide up */
-        .section-header {
-            animation: scroll-fade-up linear both;
-            animation-timeline: view();
-            animation-range: entry 0% entry 30%;
-        }
-
-        /* Help boxes */
-        .help-box {
-            animation: scroll-fade-up linear both;
-            animation-timeline: view();
-            animation-range: entry 0% entry 30%;
-        }
-
-        /* PBIP sections */
-        .pbip-input-section {
-            animation: scroll-fade-up linear both;
-            animation-timeline: view();
-            animation-range: entry 0% entry 30%;
-        }
-
-        /* Tables */
-        [data-testid="stDataFrame"] {
-            animation: scroll-fade-in linear both;
-            animation-timeline: view();
-            animation-range: entry 0% entry 25%;
-        }
-
-        /* Charts (plotly, matplotlib) */
-        [data-testid="stPlotlyChart"],
-        [data-testid="stImage"],
-        .stPlotlyChart {
-            animation: scroll-fade-up linear both;
-            animation-timeline: view();
-            animation-range: entry 0% entry 30%;
-        }
-
-        /* Footer: gentle fade */
-        .ypf-footer {
-            animation: scroll-fade-in linear both;
-            animation-timeline: view();
-            animation-range: entry 0% entry 40%;
-        }
+    /* ── TOAST ──────────────────────────────────────────────────── */
+    [data-testid="stToast"] {
+        background: var(--surface-3) !important;
+        border: 1px solid var(--border-default) !important;
+        border-radius: var(--radius-lg) !important;
+        color: var(--text-primary) !important;
     }
 
-    /* ---- Reduced Motion Override ---- */
+    /* ── FILE UPLOADER ─────────────────────────────────────────── */
+    [data-testid="stFileUploader"] section,
+    [data-testid="stFileUploaderDropzone"] {
+        background: var(--surface-2) !important;
+        border: 1px dashed var(--border-default) !important;
+        border-radius: var(--radius-md) !important;
+        color: var(--text-secondary) !important;
+    }
+    [data-testid="stFileUploaderDropzone"]:hover {
+        border-color: var(--brand-accent) !important;
+        background: var(--surface-3) !important;
+    }
+
+    /* ── ENTRANCE ANIMATION ───────────────────────────────────── */
+    @keyframes fadeSlideIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .stTabs [role="tabpanel"] {
+        animation: fadeSlideIn 0.3s var(--ease-out);
+    }
+
+    /* ── FOCUS STATES (Accessibility) ──────────────────────────── */
+    *:focus-visible {
+        outline: 2px solid var(--brand-accent) !important;
+        outline-offset: 2px;
+        border-radius: var(--radius-sm);
+    }
+
+    /* ── RESPONSIVE ────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+        .main .block-container { padding: 1rem !important; }
+        .ypf-header { padding: 1.5rem; }
+        .ypf-header h1 { font-size: 1.35rem; }
+    }
+
+    /* ── REDUCED MOTION ────────────────────────────────────────── */
     @media (prefers-reduced-motion: reduce) {
-        .feature-card,
-        .hero-stat,
-        [data-testid="stMetric"],
-        .ypf-header,
-        .section-header,
-        .help-box,
-        .pbip-input-section,
-        [data-testid="stDataFrame"],
-        [data-testid="stPlotlyChart"],
-        [data-testid="stImage"],
-        .stPlotlyChart,
-        .ypf-footer {
-            animation: none !important;
+        *, *::before, *::after {
+            transition-duration: 0.01ms !important;
+            animation-duration: 0.01ms !important;
         }
     }
     </style>
@@ -727,43 +806,40 @@ def get_shared_css():
 
 
 def render_app_header(title: str, subtitle: str = "", version: str = ""):
-    """Render a standardized YPF corporate app header with logo."""
-    from pathlib import Path
+    """Render the YPF Industrial Data Observatory app header with diagonal slash anchor.
 
-    # Buscar logo
-    logo_path = Path(__file__).parent.parent.parent / "assets" / "logo_ypf.png"
+    Args:
+        title: App title (e.g. "Power BI Analyzer")
+        subtitle: Short description
+        version: Version string (e.g. "1.1")
+    """
+    version_html = f'<span class="version">v{version}</span>' if version else ''
+    subtitle_html = f'<p class="subtitle">{subtitle}</p>' if subtitle else ''
 
-    # Crear layout con logo y título
-    col1, col2 = st.columns([1, 9])
-
-    with col1:
-        if logo_path.exists():
-            st.image(str(logo_path), width=80)
-
-    with col2:
-        version_html = f'<span class="version">v{version}</span>' if version else ''
-        subtitle_html = f'<p class="subtitle">{subtitle}</p>' if subtitle else ''
-
-        st.markdown(f"""
-        <div class="ypf-header" style="margin-top: 0.5rem;">
-            <h1>{title}</h1>
-            {subtitle_html}
-            {version_html}
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="ypf-header">
+        <h1>{title}</h1>
+        {subtitle_html}
+        {version_html}
+    </div>
+    """, unsafe_allow_html=True)
 
 
 def render_footer():
-    """Render a standardized YPF footer."""
+    """Render the YPF footer with Gerencia de Visualización credit."""
     st.markdown("""
-    <div class="ypf-footer" style="text-align: center;">
-        Para YPF - Gerencia Visualización - DAIA
+    <div class="ypf-footer">
+        YPF S.A. &middot; Gerencia de Visualización &middot; DA&amp;IA &middot; 2026
     </div>
     """, unsafe_allow_html=True)
 
 
 def render_skeleton(rows: int = 3):
-    """Render a skeleton loading placeholder."""
+    """Render a skeleton loading placeholder.
+
+    Args:
+        rows: Number of skeleton text rows to show
+    """
     skeleton_rows = ''.join(
         f'<div class="skeleton skeleton-text" style="width: {90 - i * 10}%;"></div>'
         for i in range(rows)
@@ -777,5 +853,5 @@ def render_skeleton(rows: int = 3):
 
 
 def inject_shared_styles():
-    """Inject shared CSS into the Streamlit page. Call once at the top."""
+    """Inject shared CSS into the Streamlit page. Call once at the top of each app."""
     st.markdown(get_shared_css(), unsafe_allow_html=True)

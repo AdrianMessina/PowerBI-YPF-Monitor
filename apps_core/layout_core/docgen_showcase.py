@@ -1,6 +1,7 @@
 """
 Documentation Generator Showcase - What gets documented automatically
 Compact intro showcase that appears below the app header
+Theme: Industrial Data Observatory (dark + YPF Yellow accent)
 """
 import streamlit as st
 
@@ -12,29 +13,30 @@ def render_docgen_showcase():
     """
     st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700&display=swap');
-
     .docgen-intro {
-        font-family: 'Fira Sans', sans-serif;
-        background: linear-gradient(135deg, rgba(4,81,228,0.08) 0%, rgba(4,81,228,0.02) 100%);
-        border-left: 4px solid #0451E4;
-        border-radius: 0 12px 12px 0;
+        font-family: 'DM Sans', sans-serif;
+        background: linear-gradient(135deg, rgba(242,200,17,0.06) 0%, rgba(242,200,17,0.01) 100%);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-left: 3px solid #F2C811;
+        border-radius: 0 14px 14px 0;
         padding: 1.5rem 2rem;
         margin: 1.5rem 0;
     }
 
     .docgen-intro h3 {
-        font-size: 1.3rem;
-        font-weight: 600;
-        color: #0F172A;
-        margin: 0 0 0.75rem 0;
-        letter-spacing: -0.02em;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #E8ECF4;
+        margin: 0 0 0.6rem 0;
+        letter-spacing: -0.03em;
     }
 
     .docgen-intro p {
-        font-size: 0.95rem;
-        color: #475569;
-        line-height: 1.6;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.92rem;
+        color: #8B95A8;
+        line-height: 1.65;
         margin: 0 0 1.25rem 0;
     }
 
@@ -46,31 +48,48 @@ def render_docgen_showcase():
     }
 
     .capability-item {
-        background: #FFFFFF;
-        border: 1px solid #E2E8F0;
-        border-radius: 8px;
-        padding: 0.75rem 1rem;
-        transition: all 240ms ease;
+        background: #181D2A;
+        border: 1px solid #252D3D;
+        border-radius: 10px;
+        padding: 0.8rem 1rem;
+        transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .capability-item::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0;
+        width: 2px; height: 100%;
+        background: #F2C811;
+        opacity: 0;
+        transition: opacity 240ms ease;
     }
 
     .capability-item:hover {
-        border-color: rgba(4,81,228,0.3);
-        box-shadow: 0 4px 12px rgba(4,81,228,0.08);
-        transform: translateY(-2px);
+        background: #1E2536;
+        border-color: rgba(242,200,17,0.35);
+        transform: translateX(2px);
+    }
+
+    .capability-item:hover::before {
+        opacity: 1;
     }
 
     .capability-icon {
         display: inline-block;
-        font-size: 1.2rem;
+        font-size: 1.15rem;
         margin-right: 0.6rem;
         vertical-align: middle;
     }
 
     .capability-text {
         display: inline-block;
-        font-size: 0.88rem;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.86rem;
         font-weight: 500;
-        color: #1E293B;
+        color: #E8ECF4;
         vertical-align: middle;
     }
 
@@ -80,7 +99,7 @@ def render_docgen_showcase():
     }
 
     .capability-item {
-        animation: fadeInUp 400ms ease backwards;
+        animation: fadeInUp 400ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
     }
 
     .capability-item:nth-child(1) { animation-delay: 50ms; }
@@ -92,7 +111,7 @@ def render_docgen_showcase():
     </style>
 
     <div class="docgen-intro">
-        <h3>📚 ¿Qué documenta automáticamente?</h3>
+        <h3>¿Qué documenta automáticamente?</h3>
         <p>
             Analiza tu proyecto Power BI y genera documentación técnica-funcional completa en formato Word:
         </p>

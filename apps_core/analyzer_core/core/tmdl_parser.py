@@ -190,6 +190,31 @@ class TMDLParser:
             'partitions': []
         }
 
+        # Detectar propiedades de la tabla (primeras 20 líneas)
+        first_lines = content.split('\n')[1:20]
+        is_hidden = any('isHidden' in line and not line.strip().startswith('//') for line in first_lines)
+        is_private = any('isPrivate' in line and not line.strip().startswith('//') for line in first_lines)
+        is_template = '__PBI_TemplateDateTable' in content
+
+        # Categorizar la tabla de forma precisa
+        table['isHidden'] = is_hidden
+        table['isPrivate'] = is_private
+
+        # Determinar tipo de tabla con precisión
+        if is_template:
+            table['tableType'] = 'auto_datetime_template'  # DateTableTemplate_GUID
+        elif table_name.startswith('LocalDateTable_') and is_hidden:
+            table['tableType'] = 'auto_datetime_local'  # LocalDateTable_GUID por columna de fecha
+        elif is_hidden and is_private:
+            table['tableType'] = 'system_hidden'  # Otras tablas ocultas del sistema
+        elif 'partition' in content and '= calculated' in content:
+            table['tableType'] = 'calculated'  # Tabla calculada (creada por usuario con DAX)
+        else:
+            table['tableType'] = 'user'  # Tabla normal de usuario (import/directquery)
+
+        # Flag para facilitar filtrado (SOLO True si es tabla automática de Power BI)
+        table['isSystemTable'] = table['tableType'] in ['auto_datetime_template', 'auto_datetime_local', 'system_hidden']
+
         # Parsear medidas
         measures = self._parse_measures(content, table_name)
         table['measures'] = measures
