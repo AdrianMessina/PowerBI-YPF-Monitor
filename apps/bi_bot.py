@@ -32,14 +32,30 @@ def render_app(logger_suite):
     # Import shared styles
     from apps_core.layout_core.shared_styles import render_app_header, render_footer
 
-    # Minimal app-specific CSS
+    # App-specific styles aligned to Industrial Data Observatory design system
     st.markdown("""
     <style>
-        .status-connected { color: #28a745; font-weight: bold; }
-        .status-disconnected { color: #dc3545; font-weight: bold; }
-        .chat-message { padding: 1rem; margin: 0.5rem 0; border-radius: 0.5rem; }
-        .user-message { background-color: #E6E6E6; border-left: 3px solid #0451E4; text-align: right; }
-        .bot-message { background-color: #f5f5f5; border-left: 3px solid #000000; }
+        .status-connected { color: var(--status-ok); font-weight: 600; }
+        .status-disconnected { color: var(--status-danger); font-weight: 600; }
+        .chat-message {
+            padding: 1rem 1.25rem;
+            margin: 0.5rem 0;
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+        }
+        .user-message {
+            background: var(--surface-3);
+            border: 1px solid var(--border-default);
+            border-right: 3px solid var(--brand-accent);
+            text-align: right;
+            color: var(--text-primary);
+        }
+        .bot-message {
+            background: var(--surface-2);
+            border: 1px solid var(--border-subtle);
+            border-left: 3px solid var(--brand-accent);
+            color: var(--text-secondary);
+        }
     </style>
     """, unsafe_allow_html=True)
     

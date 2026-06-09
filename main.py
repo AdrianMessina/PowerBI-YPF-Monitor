@@ -1,6 +1,7 @@
 """
 YPF BI Monitor - Main Entry Point
 Suite integrada de herramientas para Power BI
+Design System: Industrial Data Observatory
 """
 
 import streamlit as st
@@ -8,9 +9,10 @@ import sys
 import os
 from pathlib import Path
 
+# Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-# Load .env
+# Load .env file if exists (for API keys, admin password, etc.)
 _env_path = Path(__file__).parent / '.env'
 if _env_path.exists():
     with open(_env_path, 'r') as _f:
@@ -20,58 +22,57 @@ if _env_path.exists():
                 _key, _val = _line.split('=', 1)
                 os.environ.setdefault(_key.strip(), _val.strip())
 
+# Import apps
 from apps import home, powerbi_analyzer, documentation_generator, layout_organizer
 from apps import dax_optimizer, usage_dashboard
+
+# Import shared logger
 from shared.usage_logger import UsageLogger
 
+# Page config
 st.set_page_config(
     page_title="YPF BI Monitor",
-    page_icon="📊",
+    page_icon="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23F2C811'/><text x='16' y='22' text-anchor='middle' font-size='18' fill='%230B0E14' font-family='monospace'>M</text></svg>",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
+# Initialize logger in session state
 if 'logger' not in st.session_state:
-    st.session_state.logger = UsageLogger(suite_name="YPF_BI_Monitor", version="1.0")
+    st.session_state.logger = UsageLogger(
+        suite_name="YPF_BI_Monitor",
+        version="1.0"
+    )
+
 logger = st.session_state.logger
 
+# Inject shared Industrial Data Observatory styles
 from apps_core.layout_core.shared_styles import inject_shared_styles
 inject_shared_styles()
 
-# === CRITICAL CSS: kill dead space + fix sidebar contrast ===
+# Sidebar-specific overrides (dark observatory style)
 st.markdown("""
 <style>
-    /* Hide Streamlit chrome */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header[data-testid="stHeader"] {
-        background: transparent !important;
-        height: 0 !important;
-        min-height: 0 !important;
-        padding: 0 !important;
-    }
-    /* Kill top padding that Streamlit adds */
+    /* Tighter top padding on main */
     .stAppViewBlockContainer,
     [data-testid="stAppViewBlockContainer"] {
         padding-top: 1rem !important;
     }
-    .block-container {
-        padding-top: 1rem !important;
-    }
+    .block-container { padding-top: 1rem !important; }
 
-    /* ---- SIDEBAR ---- */
+    /* ── SIDEBAR ─ Industrial Data Observatory ───────────────── */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #080E1A 0%, #0F172A 50%, #1E293B 100%);
-        border-right: 1px solid rgba(255,255,255,0.06);
+        background: var(--surface-1) !important;
+        border-right: 1px solid var(--border-subtle) !important;
     }
     [data-testid="stSidebar"] > div:first-child {
-        padding-top: 0.5rem;
+        padding-top: 1.25rem;
     }
     [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
-        color: #E2E8F0;
+        color: var(--text-primary);
     }
 
-    /* Radio nav */
+    /* Radio nav items */
     [data-testid="stSidebar"] .stRadio > label {
         display: none !important;
     }
@@ -81,126 +82,170 @@ st.markdown("""
     [data-testid="stSidebar"] .stRadio [data-baseweb="radio"] {
         background: transparent;
         cursor: pointer !important;
-        border-radius: 6px;
-        padding: 0.1rem 0;
-        transition: background 120ms ease-out;
+        border-radius: var(--radius-sm);
+        padding: 0.15rem 0;
+        transition: background var(--duration-normal) var(--ease-out);
         position: relative;
     }
     [data-testid="stSidebar"] .stRadio [data-baseweb="radio"]:hover {
-        background: rgba(4,81,228,0.15);
+        background: var(--brand-accent-muted);
     }
-    /* NAV TEXT: force white on ALL text inside radio items */
+
+    /* Nav text — force across all variations */
     [data-testid="stSidebar"] .stRadio label,
-    [data-testid="stSidebar"] .stRadio label span,
-    [data-testid="stSidebar"] .stRadio label p,
-    [data-testid="stSidebar"] .stRadio label div,
+    [data-testid="stSidebar"] .stRadio label *,
     [data-testid="stSidebar"] .stRadio [data-baseweb="radio"] label,
     [data-testid="stSidebar"] .stRadio [data-baseweb="radio"] label *,
     [data-testid="stSidebar"] .stRadio [role="radiogroup"] label,
     [data-testid="stSidebar"] .stRadio [role="radiogroup"] label *,
     [data-testid="stSidebar"] .stRadio p,
     [data-testid="stSidebar"] .stRadio span {
-        color: #E2E8F0 !important;
-        font-family: 'Fira Sans', sans-serif !important;
+        color: var(--text-secondary) !important;
+        font-family: var(--font-body) !important;
         font-size: 0.88rem !important;
+        font-weight: 500 !important;
     }
     [data-testid="stSidebar"] .stRadio [data-baseweb="radio"]:hover label,
     [data-testid="stSidebar"] .stRadio [data-baseweb="radio"]:hover label *,
     [data-testid="stSidebar"] .stRadio [data-baseweb="radio"]:hover span {
-        color: #FFFFFF !important;
+        color: var(--text-primary) !important;
     }
-    /* Active */
+
+    /* Active item — accent slash on left */
     [data-testid="stSidebar"] .stRadio [data-baseweb="radio"][aria-checked="true"] {
-        background: rgba(4,81,228,0.18);
+        background: var(--brand-accent-muted);
     }
     [data-testid="stSidebar"] .stRadio [data-baseweb="radio"][aria-checked="true"]::before {
         content: '';
         position: absolute;
-        left: 0; top: 15%; bottom: 15%;
+        left: 0; top: 12%; bottom: 12%;
         width: 3px;
-        background: #0451E4;
+        background: var(--brand-accent);
         border-radius: 0 2px 2px 0;
     }
     [data-testid="stSidebar"] .stRadio [data-baseweb="radio"][aria-checked="true"] label,
     [data-testid="stSidebar"] .stRadio [data-baseweb="radio"][aria-checked="true"] label *,
     [data-testid="stSidebar"] .stRadio [data-baseweb="radio"][aria-checked="true"] span {
-        color: #FFFFFF !important;
+        color: var(--brand-accent) !important;
         font-weight: 600 !important;
     }
 
     /* Sidebar dividers */
     [data-testid="stSidebar"] hr {
-        border-color: rgba(255,255,255,0.07);
-        margin: 0.6rem 0;
+        border: none;
+        height: 1px;
+        background: var(--border-subtle);
+        margin: 0.75rem 0;
+        opacity: 0.6;
     }
 
-    /* Main headings */
-    h1, h2, h3 { color: #0F172A; }
+    /* Sidebar collapse toggle */
+    button[data-testid="stSidebarCollapseButton"]:hover {
+        color: var(--brand-accent) !important;
+    }
+    [data-testid="collapsedControl"] {
+        background: var(--surface-2) !important;
+        border-radius: 0 var(--radius-md) var(--radius-md) 0;
+        border: 1px solid var(--border-default);
+        border-left: none;
+    }
+    [data-testid="collapsedControl"] button {
+        color: var(--brand-accent) !important;
+        background: transparent !important;
+    }
+
+    /* Sidebar images — DAIA logo */
+    [data-testid="stSidebar"] img {
+        opacity: 0.95;
+        transition: opacity var(--duration-normal) var(--ease-out);
+    }
+    [data-testid="stSidebar"] img:hover {
+        opacity: 1;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# ---- SIDEBAR ----
+# ── SIDEBAR ──────────────────────────────────────────────────────
 with st.sidebar:
-    # Logo + branding compact
-    logo_path = Path(__file__).parent / "assets" / "logo_ypf.png"
-    if logo_path.exists():
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.image(str(logo_path), width="stretch")
+    # YPF logo — corporate identity anchor at top of sidebar
+    logo_ypf_path = Path(__file__).parent / "assets" / "logo_ypf.png"
+    if logo_ypf_path.exists():
+        col_l, col_c, col_r = st.columns([1, 2, 1])
+        with col_c:
+            st.image(str(logo_ypf_path), width="stretch")
 
+    # Brand header
     st.markdown("""
-    <div style="text-align: center; padding: 0 0 0.6rem 0;">
-        <h2 style="color: #FFFFFF; font-size: 1.25rem; margin: 0; font-weight: 700;
-                   font-family: 'Fira Sans', sans-serif; letter-spacing: -0.02em;">
-            BI Monitor
+    <div style="text-align: center; padding: 0.5rem 0 0.5rem 0;">
+        <h2 style="color: #E8ECF4; font-size: 1.35rem; margin: 0; font-weight: 700;
+                   font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.04em;">
+            BI <span style="color: #F2C811;">Monitor</span>
         </h2>
-        <span style="color: #94A3B8; font-size: 0.65rem;
-                     font-family: 'Fira Sans', sans-serif; font-weight: 500;
-                     text-transform: uppercase; letter-spacing: 0.1em;">
+        <p style="font-family: 'DM Sans', sans-serif; color: #5A6478; font-size: 0.66rem;
+                  margin: 0.4rem 0 0 0; text-transform: uppercase; letter-spacing: 0.12em;
+                  font-weight: 500;">
             Power BI Suite
-        </span>
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("---")
 
-    page = st.radio("Nav", [
+    # Navigation
+    nav_options = [
         "Home",
         "Power BI Analyzer",
         "Documentation Generator",
         "Layout Organizer",
         "DAX Optimizer",
         "Usage Dashboard",
-    ], label_visibility="collapsed")
+    ]
+
+    page = st.radio(
+        "Nav",
+        nav_options,
+        label_visibility="collapsed"
+    )
 
     st.markdown("---")
 
-    # Info + footer compact
+    # Info chip
     st.markdown("""
-    <div style="background: rgba(4,81,228,0.08);
-                padding: 0.6rem 0.8rem;
-                border-radius: 6px;
-                border: 1px solid rgba(4,81,228,0.10);">
-        <p style="color: #CBD5E1; margin: 0; font-size: 0.7rem;
-                  font-family: 'Fira Sans', sans-serif; line-height: 1.5;">
-            Acciones registradas para analisis de uso.
-        </p>
-    </div>
-    <div style="text-align: center; margin-top: 1rem; padding-top: 0.5rem;
-                border-top: 1px solid rgba(255,255,255,0.06);">
-        <p style="color: #94A3B8; font-size: 0.62rem; margin: 0 0 0.5rem 0;
-                  font-family: 'Fira Sans', sans-serif;">
-            Para YPF - Gerencia Visualización - DAIA
+    <div style="background: rgba(242,200,17,0.06);
+                padding: 0.7rem 0.85rem;
+                border-radius: 8px;
+                border: 1px solid rgba(242,200,17,0.12);
+                margin-top: 0.25rem;">
+        <p style="color: #8B95A8; margin: 0; font-size: 0.7rem;
+                  font-family: 'DM Sans', sans-serif; line-height: 1.55;">
+            Acciones registradas para análisis de uso.
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-    # Logo DAIA en sidebar
+    # Spacer
+    st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
+
+    # Gerencia de Visualización footer
+    st.markdown("""
+    <div style="text-align: center; padding-top: 0.75rem;
+                border-top: 1px solid rgba(255,255,255,0.06);">
+        <p style="color: #5A6478; font-size: 0.62rem; margin: 0 0 0.75rem 0;
+                  font-family: 'DM Sans', sans-serif; letter-spacing: 0.03em;
+                  line-height: 1.5;">
+            Para YPF · Gerencia de Visualización · DA&amp;IA
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # DA&IA logo
     logo_daia_path = Path(__file__).parent / "assets" / "logo_daia.png"
     if logo_daia_path.exists():
-        st.image(str(logo_daia_path), width=180)
+        col1, col2, col3 = st.columns([1, 3, 1])
+        with col2:
+            st.image(str(logo_daia_path), width="stretch")
 
-# ---- ROUTING ----
+# ── MAIN CONTENT — ROUTING ──────────────────────────────────────
 try:
     if page == "Home":
         home.render_app(logger)
@@ -215,7 +260,14 @@ try:
     elif page == "Usage Dashboard":
         usage_dashboard.render_app(logger)
 except Exception as e:
-    st.error(f"Error al cargar la aplicacion: {str(e)}")
+    st.error(f"Error al cargar la aplicación: {str(e)}")
     with st.expander("Ver detalles del error"):
         import traceback
         st.code(traceback.format_exc())
+
+    st.info("""
+    **Posibles soluciones:**
+    - Verifica que todas las dependencias estén instaladas
+    - Revisa que los archivos core de cada app estén en su lugar
+    - Consulta la documentación de la app específica
+    """)

@@ -11,9 +11,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-from apps_core.layout_core.shared_styles import render_app_header, render_footer
-from apps_core.layout_core.comparison_component import render_layout_comparison
-
 
 def render_app(logger):
     """
@@ -30,47 +27,42 @@ def render_app(logger):
     usage_logger = logger
     LOGGING_ENABLED = logger is not None
 
-    # Header estándar YPF
-    render_app_header(
-        "Power BI Model Layout Organizer",
-        "Organiza automáticamente los diagramas de modelo de Power BI",
-        "1.0"
-    )
-
-    # Estilos CSS personalizados - YPF Corporate Colors (Oficial - Guía Nov 2024)
+    # App-specific styles aligned to Industrial Data Observatory design system
     st.markdown("""
     <style>
-        :root {
-            --ypf-blue: #0451E4;      /* PANTONE 300 C - Color principal */
-            --ypf-black: #000000;     /* Negro corporativo */
-            --ypf-white: #FFFFFF;     /* Blanco */
-            --ypf-gray-1: #E6E6E6;    /* PANTONE 427 C */
-            --ypf-gray-2: #AAAAAA;    /* PANTONE 429 C */
-            --ypf-gray-3: #3C3C3C;    /* PANTONE 432 C */
+        .main-header {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.75rem;
+            color: var(--text-primary);
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            margin-bottom: 0.5rem;
         }
-        .info-box {
-            padding: 1rem;
-            border-radius: 0.5rem;
-            background-color: #E6E6E6;
-            border-left: 4px solid #0451E4;
-            margin: 1rem 0;
-        }
-        .success-box {
-            padding: 1rem;
-            border-radius: 0.5rem;
-            background-color: #E6E6E6;
-            border-left: 5px solid #0451E4;
+        .main-header .accent { color: var(--brand-accent); }
+        .info-box, .success-box {
+            padding: 1rem 1.25rem;
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
+            background: var(--surface-2);
+            border: 1px solid var(--border-subtle);
+            border-left: 3px solid var(--brand-accent);
+            color: var(--text-secondary);
             margin: 1rem 0;
         }
         .warning-box {
-            padding: 1rem;
-            border-radius: 0.5rem;
-            background-color: #AAAAAA;
-            border-left: 5px solid #000000;
+            padding: 1rem 1.25rem;
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
+            background: var(--surface-2);
+            border: 1px solid var(--border-subtle);
+            border-left: 3px solid var(--status-warn);
+            color: var(--text-secondary);
             margin: 1rem 0;
         }
     </style>
     """, unsafe_allow_html=True)
+
+    # Header
+    st.markdown('<div class="main-header">Power BI Model <span class="accent">Layout Organizer</span></div>', unsafe_allow_html=True)
+    st.markdown("**Organiza automáticamente los diagramas de modelo de Power BI**")
     
     # Tabs principales
     tab1, tab2, tab3, tab4 = st.tabs(["🎯 Organizar Layout", "🔍 Extraer Relaciones", "📊 Análisis", "ℹ️ Ayuda"])
@@ -93,14 +85,7 @@ def render_app(logger):
     
             if uploaded_pbix:
                 st.success(f"✓ Archivo cargado: {uploaded_pbix.name}")
-                st.markdown("""
-                <div style="background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.02) 100%);
-                            border-left: 3px solid #F59E0B; padding: 0.6rem 1rem; border-radius: 0 6px 6px 0;
-                            margin: 0.5rem 0; font-size: 0.85rem; color: #78350F;">
-                    ⚠️ <strong>Mantén el mismo nombre del archivo</strong> para que el Usage Dashboard pueda rastrear mejoras.
-                </div>
-                """, unsafe_allow_html=True)
-
+    
         with col2:
             st.subheader("2. Configuración")
     
@@ -295,27 +280,7 @@ def render_app(logger):
                                         output_data = f.read()
     
                                     st.markdown("### ✅ Layout Organizado Exitosamente")
-
-                                    # Log layout organization completed
-                                    if LOGGING_ENABLED and usage_logger:
-                                        try:
-                                            # Compute score: 100 if star-schema applied successfully
-                                            # Reduced if many tables without clear relationships
-                                            tables_count = len(modified_layout.get('diagrams', [{}])[0].get('nodes', [])) if modified_layout.get('diagrams') else 0
-                                            facts_count = len(fact_tables) if fact_tables else 0
-                                            # Organization quality score
-                                            org_score = min(100, 60 + (facts_count * 10) + (20 if tables_count > 0 else 0))
-
-                                            usage_logger.log_event('layout_organized', {
-                                                'filename': uploaded_pbix.name,
-                                                'tables_count': tables_count,
-                                                'fact_tables_count': facts_count,
-                                                'diagrams_count': len(modified_layout.get('diagrams', [])),
-                                                'score': org_score
-                                            })
-                                        except Exception as e:
-                                            print(f"⚠️ Error al registrar layout: {e}")
-
+    
                                     # Botón de descarga
                                     output_filename = uploaded_pbix.name.replace('.pbix', '_arranged.pbix')
                                     st.download_button(
@@ -325,8 +290,7 @@ def render_app(logger):
                                         mime="application/octet-stream",
                                         type="primary"
                                     )
-
-                                    st.info("💡 **Importante**: Mantén el mismo nombre del archivo para poder comparar mejoras en el Usage Dashboard.")
+    
                                     st.success("🎉 Descarga el archivo y ábrelo en Power BI Desktop para ver el layout organizado!")
     
                     except Exception as e:
@@ -339,32 +303,17 @@ def render_app(logger):
     with tab2:
         st.header("Extraer Relaciones desde .pbit")
     
-        st.markdown("""
-        <div style="background: linear-gradient(135deg, rgba(4,81,228,0.05) 0%, rgba(4,81,228,0.02) 100%);
-                    border-left: 3px solid #0451E4; padding: 1.25rem; border-radius: 0 8px 8px 0; margin-bottom: 1.5rem;">
-            <h4 style="margin: 0 0 0.75rem 0; color: #1E293B; font-size: 1.05rem;">
-                📋 ¿Cómo obtener el JSON de relaciones?
-            </h4>
-            <p style="margin: 0 0 1rem 0; color: #475569; font-size: 0.9rem;">
-                El archivo <strong>.pbit</strong> (Power BI Template) contiene el esquema completo del modelo
-                incluyendo todas las relaciones. Sigue estos pasos:
-            </p>
-            <ol style="margin: 0; padding-left: 1.5rem; color: #64748B; font-size: 0.88rem; line-height: 1.8;">
-                <li><strong>Abre tu archivo .pbix</strong> en Power BI Desktop</li>
-                <li>Ve al menú: <strong>Archivo → Guardar Como → Plantilla de Power BI (.pbit)</strong></li>
-                <li>Guarda el archivo .pbit en tu computadora</li>
-                <li>Súbelo aquí usando el botón de abajo</li>
-                <li>Descarga el <strong>relations.json</strong> generado</li>
-                <li>Úsalo en la pestaña "Organizar Layout" para optimizar el diagrama</li>
-            </ol>
-            <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(5,150,105,0.08);
-                        border-radius: 6px; border: 1px solid rgba(5,150,105,0.15);">
-                <p style="margin: 0; color: #059669; font-size: 0.82rem;">
-                    💡 <strong>Tip:</strong> Con el JSON de relaciones obtendrás layouts tipo estrella perfectamente organizados
-                </p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.info("""
+        **¿Qué es un archivo .pbit?**
+    
+        Un archivo .pbit (Power BI Template) es un archivo ZIP que contiene el esquema del modelo
+        en formato legible (DataModelSchema). Este esquema incluye todas las relaciones del modelo.
+    
+        **Cómo crear un .pbit:**
+        1. Abre tu modelo en Power BI Desktop
+        2. Ve a: **Archivo → Guardar Como → Plantilla de Power BI (.pbit)**
+        3. Sube el archivo aquí para extraer las relaciones
+        """)
     
         uploaded_pbit = st.file_uploader(
             "Selecciona tu archivo .pbit",
@@ -563,15 +512,10 @@ def render_app(logger):
     # =============================================================================
     with tab4:
         st.header("📖 Guía de Uso")
-
-        # Render before/after comparison
-        render_layout_comparison()
-
-        st.markdown("---")
-
+    
         st.markdown("""
         ## ¿Qué hace esta aplicación?
-
+    
         Esta herramienta organiza automáticamente el diagrama de modelo de Power BI en layouts limpios
         y optimizados, sin necesidad de arrastrar manualmente las tablas.
     
@@ -625,6 +569,11 @@ def render_app(logger):
         - Si algo sale mal, puedes eliminar el archivo `DiagramLayout` del .pbix (renombra a .zip) y Power BI lo regenerará
         - El radio del Star Layout controla qué tan lejos están las dimensiones del fact central
         - Sin archivo relations.json, la herramienta usará un layout radial simple
+    
+        ### Créditos
+    
+        Basado en el proyecto open-source de Irinel47:
+        [https://github.com/Irinel47/pbi-model-layout](https://github.com/Irinel47/pbi-model-layout)
         """)
     
         st.markdown("---")
@@ -647,5 +596,11 @@ def render_app(logger):
         - El archivo debe ser generado desde Power BI Desktop actual
         """)
     
-    # Footer estándar YPF
-    render_footer()
+    # Footer
+    st.markdown("---")
+    st.markdown("""
+    <div style='text-align: center; color: #666;'>
+        <p>Power BI Model Layout Organizer v1.0</p>
+        <p>Desarrollado con ❤️ usando Streamlit</p>
+    </div>
+    """, unsafe_allow_html=True)

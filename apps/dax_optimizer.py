@@ -11,8 +11,6 @@ from pathlib import Path
 import sys
 import os
 import time
-import zipfile
-import shutil
 
 # Streamlit extras para componentes visuales mejorados (OPCIONAL)
 try:
@@ -64,155 +62,101 @@ def render_app(logger):
     # Variable para logger
     usage_logger = logger
     LOGGING_ENABLED = logger is not None
-
-
-    def extract_pbip_from_zip(uploaded_file, extract_to="/home/cdsw/pbip_projects"):
-        """
-        Extrae un archivo ZIP con estructura PBIP y retorna la ruta al archivo .pbip
-
-        Args:
-            uploaded_file: UploadedFile de Streamlit
-            extract_to: Directorio donde extraer (default: /home/cdsw/pbip_projects)
-
-        Returns:
-            str: Ruta al archivo .pbip encontrado, o None si hay error
-        """
-        try:
-            # Crear directorio si no existe
-            os.makedirs(extract_to, exist_ok=True)
-
-            # Nombre del proyecto (sin extensión .zip)
-            project_name = Path(uploaded_file.name).stem
-            project_path = Path(extract_to) / project_name
-
-            # Si ya existe, eliminar para evitar conflictos
-            if project_path.exists():
-                shutil.rmtree(project_path)
-
-            # Crear carpeta del proyecto
-            project_path.mkdir(parents=True, exist_ok=True)
-
-            # Extraer ZIP
-            with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
-                zip_ref.extractall(project_path)
-
-            # Buscar archivo .pbip
-            pbip_files = list(project_path.glob("**/*.pbip"))
-
-            if not pbip_files:
-                st.error(f"❌ No se encontró archivo .pbip dentro del ZIP")
-                return None
-
-            if len(pbip_files) > 1:
-                st.warning(f"⚠️ Se encontraron {len(pbip_files)} archivos .pbip. Usando el primero: {pbip_files[0].name}")
-
-            pbip_path = str(pbip_files[0])
-
-            # Verificar que existan las carpetas necesarias
-            pbip_dir = pbip_files[0].parent
-            semantic_dir = pbip_dir / f"{pbip_files[0].stem}.SemanticModel"
-
-            if not semantic_dir.exists():
-                st.warning(f"⚠️ Carpeta .SemanticModel faltante. El análisis puede ser incompleto.")
-
-            return pbip_path
-
-        except zipfile.BadZipFile:
-            st.error("❌ El archivo no es un ZIP válido")
-            return None
-        except Exception as e:
-            st.error(f"❌ Error al extraer ZIP: {str(e)}")
-            return None
-
-
+    
+    
     # Import shared styles
     from apps_core.layout_core.shared_styles import render_app_header, render_footer
 
-    # App-specific CSS (DAX Optimizer custom components only - shared styles injected globally)
+    # App-specific styles aligned to Industrial Data Observatory design system
     st.markdown("""
     <style>
-        /* DAX Optimizer specific components */
-
         .metric-card {
-            background: linear-gradient(135deg, #000000 0%, #2B2B2B 100%);
+            background: var(--surface-2);
             padding: 1.5rem;
-            border-radius: 15px;
-            color: white;
+            border-radius: var(--radius-lg);
+            color: var(--text-primary);
             text-align: center;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-            border: 2px solid #0451E4;
-            transition: all 0.3s ease;
+            border: 1px solid var(--border-default);
+            border-left: 3px solid var(--brand-accent);
+            transition: all var(--duration-normal) var(--ease-out);
         }
-
         .metric-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(4, 81, 228, 0.3);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--brand-accent);
         }
-
         .metric-value {
-            font-size: 2.5rem;
-            font-weight: bold;
+            font-family: var(--font-mono);
+            font-size: 2.25rem;
+            font-weight: 600;
+            color: var(--brand-accent);
             margin: 0.5rem 0;
         }
-
         .metric-label {
-            font-size: 0.9rem;
-            opacity: 0.9;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 500;
         }
-
         .issue-badge {
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
+            padding: 0.25rem 0.7rem;
+            border-radius: var(--radius-full);
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: 0.7rem;
             display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border: 1px solid transparent;
         }
-
         .critical-badge {
-            background: #dc3545;
-            color: white;
+            background: var(--status-danger-bg);
+            color: var(--status-danger);
+            border-color: rgba(209,52,56,0.25);
         }
-
         .warning-badge {
-            background: #fd7e14;
-            color: white;
+            background: var(--status-warn-bg);
+            color: var(--status-warn);
+            border-color: rgba(245,158,11,0.25);
         }
-
         .info-badge {
-            background: #0451E4;
-            color: white;
+            background: var(--brand-accent-muted);
+            color: var(--brand-accent);
+            border-color: rgba(242,200,17,0.25);
         }
-
         .measure-card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 16px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-            border-left: 5px solid #0451E4;
-            transition: all 0.3s ease;
+            background: var(--surface-2);
+            border-radius: var(--radius-md);
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-default);
+            border-left: 3px solid var(--brand-accent);
+            transition: all var(--duration-normal) var(--ease-out);
+            color: var(--text-secondary);
         }
-
         .measure-card:hover {
-            box-shadow: 0 4px 16px rgba(4, 81, 228, 0.12);
-            transform: translateY(-2px);
+            background: var(--surface-3);
+            transform: translateX(2px);
+            box-shadow: var(--shadow-md);
         }
-
         .developer-badge {
-            background: linear-gradient(135deg, #0451E4 0%, #0340B8 100%);
-            color: white;
-            padding: 16px;
-            border-radius: 10px;
+            background: var(--surface-3);
+            color: var(--text-primary);
+            border: 1px solid var(--border-default);
+            border-left: 3px solid var(--brand-accent);
+            padding: 1rem;
+            border-radius: var(--radius-md);
             text-align: center;
-            margin-top: 10px;
+            margin-top: 0.5rem;
         }
-
         .how-it-works-box {
-            background: #F0F4FF;
-            border-left: 4px solid #0451E4;
-            border-radius: 0 8px 8px 0;
-            padding: 16px;
-            margin-bottom: 16px;
+            background: var(--surface-2);
+            border: 1px solid var(--border-subtle);
+            border-left: 3px solid var(--brand-accent);
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
         }
     </style>
     """, unsafe_allow_html=True)
@@ -276,77 +220,66 @@ def render_app(logger):
     
     def render_file_upload():
         """Renderiza la sección de carga de archivo o carpeta PBIP"""
-        is_cloud = os.getenv('DEPLOYMENT_ENV') == 'production'
-
         with st.expander("📁 Cargar archivo PBIP", expanded=True):
-            if is_cloud:
-                # ===== MODO CLOUD: ZIP UPLOAD =====
+            st.info("""
+            **ℹ️ Estructura de archivos PBIP:**
+    
+            Cuando guardas un archivo como PBIP en Power BI Desktop, se generan:
+            - 📄 Un archivo `.pbip` (archivo de configuración JSON)
+            - 📁 Una carpeta `.SemanticModel` (contiene el modelo de datos)
+            - 📁 Una carpeta `.Report` (contiene el reporte)
+    
+            **Puedes pegar la ruta a cualquiera de estos:**
+            1. La ruta al archivo `.pbip` (Ejemplo: `C:\\Users\\...\\MiReporte.pbip`)
+            2. La ruta a la carpeta `.SemanticModel` (Ejemplo: `C:\\Users\\...\\MiReporte.SemanticModel`)
+            3. La ruta a la carpeta padre que contiene todo
+            """)
+    
+            # Opción 1: Ruta a archivo/carpeta PBIP (recomendado)
+            st.markdown("**Opción 1: Pegar ruta** (Recomendado)")
+            pbip_folder_path = st.text_input(
+                "Pega la ruta completa al archivo .pbip o a la carpeta .SemanticModel",
+                placeholder=r"C:\Users\...\MiReporte.pbip",
+                help="Copia y pega la ruta completa al archivo .pbip. ✅ Puedes pegar la ruta CON comillas, la aplicación las detecta automáticamente."
+            )
+    
+            # Nota sobre comillas
+            st.success("✅ **Nota importante:** Si al copiar la ruta esta incluye comillas (como `\"C:\\Users\\...\\archivo.pbip\"`), ¡no te preocupes! La aplicación las reconoce y procesa correctamente.")
+    
+            # Mostrar instrucciones de cómo copiar la ruta
+            with st.expander("💡 ¿Cómo copiar la ruta del archivo?"):
                 st.markdown("""
-                **📦 Sube tu proyecto PBIP comprimido (ZIP)**
-
-                1. 📂 Localiza tu proyecto PBIP en Windows
-                2. 🗜️ **Comprime** el archivo `.pbip` y las 2 carpetas en un ZIP
-                3. ⬆️ **Sube el archivo ZIP** usando el botón de abajo
-
-                **Nota:** El ZIP debe contener el `.pbip` y las carpetas en la raíz.
+                **Opción A: Desde el Explorador de Windows**
+                1. Abre el Explorador de Windows
+                2. Navega hasta la carpeta que contiene tu archivo `.pbip`
+                3. **SHIFT + Click derecho** en el archivo `.pbip` → **Copiar como ruta de acceso**
+                4. Pega la ruta arriba ✅ **(se copiará con comillas, la app las procesa automáticamente)**
+    
+                **Opción B: Desde la barra de direcciones**
+                1. Abre el Explorador de Windows
+                2. Navega hasta la carpeta que contiene tu archivo `.pbip`
+                3. Click en la barra de direcciones arriba → Copiar
+                4. Pega la ruta arriba y agrega `\\NombreDeArchivo.pbip` al final
+    
+                **Ejemplo de ruta válida:**
+                ```
+                C:\\Users\\TuUsuario\\Documentos\\MiProyecto\\Reporte.pbip
+                ```
+                O con comillas:
+                ```
+                "C:\\Users\\TuUsuario\\Documentos\\MiProyecto\\Reporte.pbip"
+                ```
                 """)
-
-                uploaded_file = st.file_uploader(
-                    "Selecciona el archivo ZIP con tu proyecto PBIP:",
-                    type=['zip'],
-                    help="Archivo ZIP conteniendo: archivo.pbip y carpeta .SemanticModel",
-                    key="dax_zip_uploader"
-                )
-
-                st.markdown("""
-                <div style="background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.02) 100%);
-                            border-left: 3px solid #F59E0B; padding: 0.6rem 1rem; border-radius: 0 6px 6px 0;
-                            margin: 0.5rem 0; font-size: 0.85rem; color: #78350F;">
-                    ⚠️ <strong>Mantén el mismo nombre del archivo</strong> entre analisis para comparar mejoras en el Usage Dashboard.
-                </div>
-                """, unsafe_allow_html=True)
-
-                return None, uploaded_file
-
-            else:
-                # ===== MODO LOCAL: FILE PATH INPUT =====
-                st.info("""
-                **ℹ️ Estructura de archivos PBIP:**
-
-                Cuando guardas un archivo como PBIP en Power BI Desktop, se generan:
-                - 📄 Un archivo `.pbip` (archivo de configuración JSON)
-                - 📁 Una carpeta `.SemanticModel` (contiene el modelo de datos)
-                - 📁 Una carpeta `.Report` (contiene el reporte)
-
-                **Puedes pegar la ruta a cualquiera de estos:**
-                1. La ruta al archivo `.pbip` (Ejemplo: `C:\\Users\\...\\MiReporte.pbip`)
-                2. La ruta a la carpeta `.SemanticModel` (Ejemplo: `C:\\Users\\...\\MiReporte.SemanticModel`)
-                3. La ruta a la carpeta padre que contiene todo
-                """)
-
-                pbip_folder_path = st.text_input(
-                    "Pega la ruta completa al archivo .pbip o a la carpeta .SemanticModel",
-                    placeholder=r"C:\Users\...\MiReporte.pbip",
-                    help="Copia y pega la ruta completa al archivo .pbip. ✅ Puedes pegar la ruta CON comillas, la aplicación las detecta automáticamente."
-                )
-
-                # Mostrar instrucciones de cómo copiar la ruta
-                with st.expander("💡 ¿Cómo copiar la ruta del archivo?"):
-                    st.markdown("""
-                    **Opción A: Desde el Explorador de Windows**
-                    1. Abre el Explorador de Windows
-                    2. Navega hasta la carpeta que contiene tu archivo `.pbip`
-                    3. **SHIFT + Click derecho** en el archivo `.pbip` → **Copiar como ruta de acceso**
-                    4. Pega la ruta arriba ✅ **(se copiará con comillas, la app las procesa automáticamente)**
-
-                    **Opción B: Desde la barra de direcciones**
-                    1. Abre el Explorador de Windows
-                    2. Navega hasta la carpeta que contiene tu archivo `.pbip`
-                    3. Click en la barra de direcciones arriba → Copiar
-                    4. Pega la ruta arriba y agrega `\\NombreDeArchivo.pbip` al final
-                    """)
-
-                return pbip_folder_path, None
+    
+            # Opción 2: Archivo ZIP (alternativa)
+            st.markdown("**Opción 2: Subir archivo ZIP** (Alternativa)")
+            uploaded_file = st.file_uploader(
+                "O selecciona un archivo .zip si comprimiste el PBIP",
+                type=['zip'],
+                help="Si comprimiste todas las carpetas PBIP en un archivo ZIP, súbelo aquí"
+            )
+    
+        return pbip_folder_path, uploaded_file
     
     
     def export_measures_to_csv(ranked_measures):
@@ -996,15 +929,13 @@ def render_app(logger):
                     recommendations_count=len(ranked_measures)
                 )
     
-                # Registrar análisis de medidas DAX (específico) - con score
+                # Registrar análisis de medidas DAX (específico)
                 usage_logger.log_dax_measures_analyzed(
                     measures_count=len(ranked_measures),
                     critical_count=stats.get('critical', 0),
                     high_count=stats.get('high', 0),
                     medium_count=stats.get('medium', 0),
-                    low_count=stats.get('low', 0),
-                    filename=Path(file_path).name,
-                    avg_risk_score=stats.get('avg_score')
+                    low_count=stats.get('low', 0)
                 )
             except Exception as e:
                 print(f"⚠️ Error al registrar análisis: {e}")
@@ -1014,10 +945,97 @@ def render_app(logger):
     
     def main():
         """Función principal de la aplicación"""
-
+    
         # Render header
         render_header()
-
+    
+        # Sidebar con diseño mejorado
+        with st.sidebar:
+            # Logo/título del sidebar
+            st.markdown("""
+            <div style="text-align: center; padding: 10px;">
+                <h2 style="color: #0451E4; margin-bottom: 5px;">⚡ DAX Optimizer</h2>
+                <p style="color: #6c757d; font-size: 0.9rem; margin-top: -5px;">v1.1</p>
+            </div>
+            """, unsafe_allow_html=True)
+    
+            st.markdown("---")
+    
+            # Características con iconos mejorados
+            with st.expander("✨ Características principales", expanded=True):
+                st.markdown("""
+                - 📂 **Análisis completo de archivos PBIP**
+                  Procesa todo tu modelo de datos en segundos
+    
+                - 🔍 **Detección inteligente de problemas**
+                  Identifica issues críticos de performance
+    
+                - 📊 **Sistema de scoring con tolerancia**
+                  Evalúa el riesgo de cada medida DAX
+    
+                - 💡 **Sugerencias de optimización**
+                  Recomendaciones específicas y accionables
+    
+                - 📈 **Visualización de influencia**
+                  Gráficos interactivos para análisis rápido
+                """)
+    
+            st.markdown("---")
+    
+            # Guía rápida
+            with st.expander("🚀 Guía rápida"):
+                st.markdown("""
+                **Paso 1:** Copia la ruta de tu archivo `.pbip`
+    
+                **Paso 2:** Pégala en el campo de entrada (con o sin comillas)
+    
+                **Paso 3:** Ajusta la tolerancia de riesgo según tus necesidades
+    
+                **Paso 4:** Explora las medidas con mayor riesgo
+    
+                **Paso 5:** Exporta los resultados para compartir
+                """)
+    
+            st.markdown("---")
+    
+            # Desarrollador con diseño mejorado
+            st.markdown("""
+            <div class="developer-badge">
+                <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">Desarrollado por</p>
+                <h3 style="margin: 5px 0; font-size: 1.3rem;">Adrián Javier Messina</h3>
+                <p style="margin: 5px 0; font-size: 1rem; font-weight: 600;">Torre Visualización</p>
+                <p style="margin: 5px 0; font-size: 0.8rem; opacity: 0.8;">📅 Enero 2026</p>
+            </div>
+            """, unsafe_allow_html=True)
+    
+            st.markdown("---")
+    
+            # Recursos útiles
+            with st.expander("📚 Recursos y documentación"):
+                st.markdown("""
+                **Patrones DAX:**
+                - [SQLBI - DAX Patterns](https://www.sqlbi.com/patterns/)
+                - [DAX Guide](https://dax.guide/)
+    
+                **Power BI:**
+                - [Best Practices](https://docs.microsoft.com/power-bi/)
+                - [Performance Tuning](https://docs.microsoft.com/power-bi/guidance/power-bi-optimization)
+    
+                **Comunidad:**
+                - [Power BI Community](https://community.powerbi.com/)
+                """)
+    
+            st.markdown("---")
+    
+            # Versión
+            st.markdown("""
+            <div style="text-align: center; padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                <p style="margin: 0; font-size: 0.85rem; color: #6c757d;">Versión</p>
+                <code style="font-size: 1rem; color: #0451E4; font-weight: 600;">v1.1.2</code>
+                <p style="margin: 5px 0 0 0; font-size: 0.75rem; color: #adb5bd;">Build 2026.02.03</p>
+            </div>
+            """, unsafe_allow_html=True)
+    
         # Upload de archivo o ruta de carpeta
         pbip_folder_path, uploaded_file = render_file_upload()
     
@@ -1041,12 +1059,11 @@ def render_app(logger):
                 st.error(f"⚠️ La ruta '{pbip_path}' no existe. Verifica que la ruta sea correcta.")
     
         elif uploaded_file is not None:
-            # Opción 2: Archivo ZIP subido
-            with st.spinner("📦 Extrayendo proyecto PBIP..."):
-                file_to_analyze = extract_pbip_from_zip(uploaded_file)
-
-            if file_to_analyze:
-                st.success(f"✅ Proyecto extraído correctamente: `{Path(file_to_analyze).name}`")
+            # Opción 2: Archivo subido
+            temp_file_path = os.path.join(os.getcwd(), uploaded_file.name)
+            with open(temp_file_path, 'wb') as f:
+                f.write(uploaded_file.getbuffer())
+            file_to_analyze = temp_file_path
     
         if file_to_analyze:
             try:

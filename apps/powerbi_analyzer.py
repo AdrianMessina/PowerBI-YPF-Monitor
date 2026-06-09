@@ -43,88 +43,67 @@ def render_app(logger):
     # Import shared styles (replaces app-specific CSS)
     from apps_core.layout_core.shared_styles import render_app_header, render_footer
 
-    # Minimal app-specific CSS (functional styles only - layout comes from shared CSS)
+    # App-specific styles aligned to Industrial Data Observatory design system
     st.markdown("""
         <style>
-        /* Power BI Analyzer - Functional CSS variables */
-        :root {
-            --success-color: #10B981;
-            --warning-color: #F59E0B;
-            --critical-color: #EF4444;
-        }
+        .score-excellent { color: var(--status-ok); }
+        .score-good { color: var(--status-ok); }
+        .score-warning { color: var(--status-warn); }
+        .score-poor { color: var(--status-danger); }
 
-        /* Score colors */
-        .score-excellent { color: var(--success-color); }
-        .score-good { color: #00D4AA; }
-        .score-warning { color: var(--warning-color); }
-        .score-poor { color: var(--critical-color); }
-
-        /* Badges */
         .badge {
-            padding: 0.375rem 0.75rem;
-            border-radius: 8px;
-            font-size: 0.875rem;
+            padding: 0.25rem 0.7rem;
+            border-radius: var(--radius-full);
+            font-size: 0.7rem;
             font-weight: 600;
             display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border: 1px solid transparent;
         }
         .badge-success {
-            background-color: rgba(16, 185, 129, 0.1);
-            color: var(--success-color);
-            border: 1px solid rgba(16, 185, 129, 0.2);
+            background: var(--status-ok-bg);
+            color: var(--status-ok);
+            border-color: rgba(16,185,129,0.25);
         }
         .badge-warning {
-            background-color: rgba(245, 158, 11, 0.1);
-            color: var(--warning-color);
-            border: 1px solid rgba(245, 158, 11, 0.2);
+            background: var(--status-warn-bg);
+            color: var(--status-warn);
+            border-color: rgba(245,158,11,0.25);
         }
         .badge-danger {
-            background-color: rgba(239, 68, 68, 0.1);
-            color: var(--critical-color);
-            border: 1px solid rgba(239, 68, 68, 0.2);
+            background: var(--status-danger-bg);
+            color: var(--status-danger);
+            border-color: rgba(209,52,56,0.25);
         }
 
-        /* Metric cards */
         .metric-card {
-            background: white;
-            padding: 1.75rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            border-left: 4px solid #0451E4;
+            background: var(--surface-2);
+            padding: 1.5rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-default);
+            border-left: 3px solid var(--brand-accent);
+            color: var(--text-secondary);
         }
 
-        /* Tabs - YPF styled */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 8px;
-            background-color: #E6E6E6;
-            padding: 0.5rem;
-            border-radius: 12px;
-            border-bottom: 3px solid #0451E4;
-        }
-        .stTabs [aria-selected="true"] {
-            background: linear-gradient(135deg, #0451E4 0%, #0340B8 100%);
-            color: #FFFFFF;
-            box-shadow: 0 2px 8px rgba(4, 81, 228, 0.3);
-        }
-
-        /* Loader spinner */
         .ypf-loader-container {
             display: flex;
             flex-direction: row;
             align-items: center;
             justify-content: center;
-            padding: 1.5rem;
-            background: rgba(4, 81, 228, 0.03);
-            border-radius: 12px;
-            border: 2px solid #0451E4;
+            padding: 1.25rem;
+            background: var(--surface-2);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-default);
+            border-left: 3px solid var(--brand-accent);
             gap: 1rem;
         }
         .ypf-loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #000000;
-            border-right: 4px solid #0451E4;
+            border: 3px solid var(--surface-3);
+            border-top: 3px solid var(--brand-accent);
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             animation: spin 1s linear infinite;
         }
         @keyframes spin {
@@ -133,9 +112,9 @@ def render_app(logger):
         }
         .ypf-loader-text {
             margin: 0;
-            font-size: 1rem;
-            font-weight: 600;
-            color: #000000;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-primary);
         }
         </style>
     """, unsafe_allow_html=True)
@@ -198,54 +177,142 @@ def render_app(logger):
     
     
     def create_score_gauge(score):
-        """Crea un gauge chart moderno y minimalista para el score"""
+        """Score gauge — Industrial Data Observatory theme. Thresholds 90/75/60."""
         fig = go.Figure(go.Indicator(
             mode="gauge+number",
             value=score,
             domain={'x': [0, 1], 'y': [0, 1]},
             title={
                 'text': "Score General",
-                'font': {'size': 22, 'family': 'Inter, sans-serif', 'color': '#2C3E50'}
+                'font': {'size': 18, 'family': 'Space Grotesk, sans-serif', 'color': '#E8ECF4'}
             },
             number={
-                'font': {'size': 48, 'family': 'Inter, sans-serif', 'color': get_score_color(score)},
+                'font': {'size': 52, 'family': 'JetBrains Mono, monospace', 'color': get_score_color(score)},
                 'suffix': "/100"
             },
             gauge={
                 'axis': {
                     'range': [None, 100],
-                    'tickwidth': 2,
-                    'tickcolor': "#E1E8ED",
-                    'tickfont': {'size': 12, 'color': '#6B7280'}
+                    'tickwidth': 1,
+                    'tickcolor': "#354155",
+                    'tickfont': {'size': 11, 'color': '#8B95A8', 'family': 'JetBrains Mono, monospace'}
                 },
                 'bar': {
                     'color': get_score_color(score),
-                    'thickness': 0.75
+                    'thickness': 0.72
                 },
-                'bgcolor': "#F7F9FC",
-                'borderwidth': 0,
+                'bgcolor': "#181D2A",
+                'borderwidth': 1,
+                'bordercolor': "#252D3D",
                 'steps': [
-                    {'range': [0, 60], 'color': 'rgba(239, 68, 68, 0.1)'},
-                    {'range': [60, 75], 'color': 'rgba(245, 158, 11, 0.1)'},
-                    {'range': [75, 90], 'color': 'rgba(0, 212, 170, 0.1)'},
-                    {'range': [90, 100], 'color': 'rgba(16, 185, 129, 0.1)'}
+                    {'range': [0, 60], 'color': 'rgba(209, 52, 56, 0.18)'},
+                    {'range': [60, 75], 'color': 'rgba(245, 158, 11, 0.18)'},
+                    {'range': [75, 90], 'color': 'rgba(0, 120, 212, 0.18)'},
+                    {'range': [90, 100], 'color': 'rgba(16, 185, 129, 0.20)'}
                 ],
                 'threshold': {
-                    'line': {'color': "#10B981", 'width': 3},
-                    'thickness': 0.8,
+                    'line': {'color': "#F2C811", 'width': 3},
+                    'thickness': 0.85,
                     'value': 90
                 }
             }
         ))
-    
+
         fig.update_layout(
             height=320,
             margin=dict(l=30, r=30, t=60, b=30),
             paper_bgcolor="rgba(0,0,0,0)",
-            font={'color': "#2C3E50", 'family': "Inter, sans-serif"}
+            font={'color': "#E8ECF4", 'family': "Space Grotesk, sans-serif"}
         )
-    
+
         return fig
+
+
+    def render_category_breakdown(category_scores: dict):
+        """Renderiza el breakdown del score por las 4 dimensiones de calidad.
+
+        Cada categoría muestra: peso, score, status badge y barra de progreso.
+        Diseño Industrial Data Observatory — surface cards + accent amarillo.
+        """
+        if not category_scores:
+            return
+
+        # Orden fijo (modelo primero por peso 35%, luego DAX 25%, diseño 25%, gobernanza 15%)
+        ordered_keys = ['modelo_semantico', 'dax_performance', 'diseno_reporte', 'gobernanza']
+        ordered = [(k, category_scores[k]) for k in ordered_keys if k in category_scores]
+
+        # Status -> (label corto, color hex, color rgba para fondo)
+        status_palette = {
+            'excellent':   ('Excelente', '#10B981', 'rgba(16,185,129,0.10)'),
+            'good':        ('Bueno',     '#0078D4', 'rgba(0,120,212,0.10)'),
+            'warning':     ('Atención',  '#F59E0B', 'rgba(245,158,11,0.10)'),
+            'poor':        ('Crítico',   '#D13438', 'rgba(209,52,56,0.10)'),
+            'unavailable': ('N/D',       '#5A6478', 'rgba(90,100,120,0.08)'),
+        }
+
+        st.markdown("""
+        <div style="display:flex; align-items:baseline; justify-content:space-between;
+                    margin: 0.25rem 0 0.85rem 0;">
+            <h4 style="font-family:'Space Grotesk',sans-serif; color:#E8ECF4;
+                       font-size:1rem; font-weight:600; margin:0; letter-spacing:-0.02em;">
+                Score por Dimensión
+            </h4>
+            <span style="font-family:'JetBrains Mono',monospace; color:#5A6478;
+                         font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase;">
+                4 dimensiones · ponderado
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        cols = st.columns(len(ordered))
+        for col, (cat_key, cat) in zip(cols, ordered):
+            score = cat.get('score')
+            status = cat.get('status', 'unavailable')
+            label_status, color_hex, color_bg = status_palette.get(status, status_palette['unavailable'])
+            weight_pct = int(round(cat.get('weight', 0) * 100))
+            score_display = f"{int(round(score))}" if score is not None else "—"
+            bar_width = max(0, min(100, score if score is not None else 0))
+
+            with col:
+                st.markdown(f"""
+                <div style="background:#181D2A; border:1px solid #1A2030;
+                            border-left:3px solid #F2C811; border-radius:10px;
+                            padding:1rem 1.1rem; height:100%; position:relative;
+                            overflow:hidden;">
+                    <div style="display:flex; align-items:center; justify-content:space-between;
+                                margin-bottom:0.6rem;">
+                        <span style="font-family:'JetBrains Mono',monospace; color:#F2C811;
+                                     font-size:0.62rem; letter-spacing:0.14em; font-weight:600;
+                                     padding:0.15rem 0.45rem; border-radius:4px;
+                                     background:rgba(242,200,17,0.10); border:1px solid rgba(242,200,17,0.20);">
+                            {weight_pct}%
+                        </span>
+                        <span style="font-family:'JetBrains Mono',monospace; color:{color_hex};
+                                     font-size:0.6rem; letter-spacing:0.10em; font-weight:600;
+                                     padding:0.15rem 0.4rem; border-radius:9999px;
+                                     background:{color_bg}; text-transform:uppercase;">
+                            {label_status}
+                        </span>
+                    </div>
+                    <div style="font-family:'Space Grotesk',sans-serif; color:#E8ECF4;
+                                font-size:0.82rem; font-weight:600; letter-spacing:-0.01em;
+                                line-height:1.25; margin-bottom:0.5rem; min-height:2.1rem;">
+                        {cat['label']}
+                    </div>
+                    <div style="font-family:'JetBrains Mono',monospace; color:{color_hex};
+                                font-size:1.85rem; font-weight:600; line-height:1;
+                                margin-bottom:0.6rem;">
+                        {score_display}<span style="color:#5A6478; font-size:0.85rem; margin-left:2px;">/100</span>
+                    </div>
+                    <div style="background:#0B0E14; border-radius:9999px; height:5px;
+                                overflow:hidden; border:1px solid #1A2030;">
+                        <div style="width:{bar_width}%; height:100%;
+                                    background:linear-gradient(90deg, {color_hex} 0%, {color_hex}cc 100%);
+                                    border-radius:9999px;
+                                    transition:width 400ms cubic-bezier(0.16,1,0.3,1);"></div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
     
     
     def create_metrics_comparison_chart(metric_scores, metrics):
@@ -707,21 +774,49 @@ def render_app(logger):
     
             with col1:
                 st.markdown("#### Tablas del Modelo")
+
+                # Obtener desglose de tablas si está disponible
+                tables_by_type = metrics.get('tables_by_type', {})
+                total_tables = metrics.get('total_tables', 0)
+
                 # Usar nueva función con thresholds
                 display_metric_with_threshold(
                     "Total de Tablas",
-                    metrics.get('total_tables', 0),
+                    total_tables,
                     thresholds.get('tables_in_model')
                 )
-    
+
+                # Mostrar desglose si está disponible
+                if tables_by_type and any(tables_by_type.values()):
+                    user_count = tables_by_type.get('user', 0)
+                    calc_count = tables_by_type.get('calculated', 0)
+                    auto_template = tables_by_type.get('auto_datetime_template', 0)
+                    auto_local = tables_by_type.get('auto_datetime_local', 0)
+                    system_hidden = tables_by_type.get('system_hidden', 0)
+                    total_in_tmdl = user_count + calc_count + auto_template + auto_local + system_hidden
+
+                    with st.expander("📋 Ver desglose detallado de tablas"):
+                        st.markdown(f"""
+**Tablas contabilizadas ({total_tables}):**
+- ✅ {user_count} tablas de datos (Import/DirectQuery)
+- ✅ {calc_count} tablas calculadas (DAX)
+
+**Excluidas (automáticas de Power BI):**
+- ❌ {auto_template} DateTableTemplate (Auto Date/Time)
+- ❌ {auto_local} LocalDateTable (generadas por columnas de fecha)
+- ❌ {system_hidden} tablas ocultas del sistema
+
+**Total en archivos TMDL:** {total_in_tmdl} tablas
+                        """)
+
                 st.markdown("---")
-    
+
                 display_metric_with_threshold(
                     "Columnas Calculadas",
                     metrics.get('calculated_columns', 0),
                     thresholds.get('calculated_columns')
                 )
-    
+
                 st.markdown("---")
                 st.metric("Tablas Calculadas", metrics.get('calculated_tables', 0))
     
@@ -1314,9 +1409,15 @@ def render_app(logger):
                                         st.metric(label, value, delta=delta)
                                     else:
                                         st.metric(label, value)
-    
+
+                    # Breakdown por dimensión de calidad (fila full-width bajo el gauge + resumen)
                     st.markdown("---")
-    
+                    cat_scores = metrics.get('category_scores')
+                    if cat_scores:
+                        render_category_breakdown(cat_scores)
+
+                    st.markdown("---")
+
                     # FIX v1.1: Información adicional - solo si está disponible
                     additional_info = []
     

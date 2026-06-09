@@ -3,108 +3,103 @@ Home - Dashboard Principal de YPF BI Monitor
 """
 
 import streamlit as st
-from apps_core.layout_core.shared_styles import render_footer
+from pathlib import Path
+from apps_core.layout_core.shared_styles import render_app_header, render_footer
 
 
-# Emoji Icons (always work, no external dependencies)
-_IC = {
-    "analyzer": "📊",
-    "docgen": "📄",
-    "layout": "🗂️",
-    "dax": "✨",
-}
-
-
-def _card(icon_key: str, title: str, desc: str, items: list):
-    icon = _IC.get(icon_key, '')
-    li = ''.join(f'<li>{t}</li>' for t in items)
+def _render_card(title: str, description: str, features: list):
+    """Render a feature card using shared CSS class."""
+    features_html = ''.join(f'<li>{f}</li>' for f in features)
     st.markdown(f"""
     <div class="feature-card">
-        <div class="card-icon">{icon}</div>
         <h3>{title}</h3>
-        <p>{desc}</p>
-        <ul>{li}</ul>
+        <p>{description}</p>
+        <ul>{features_html}</ul>
     </div>
     """, unsafe_allow_html=True)
 
 
 def render_app(logger):
-    """Render home dashboard."""
+    """
+    Render home dashboard
 
-    # Compact header with stats inline
+    Args:
+        logger: Logger de la suite para tracking de uso
+    """
+
+    render_app_header(
+        "YPF BI Monitor Suite",
+        "Suite Integrada de Herramientas para Power BI",
+        "1.0"
+    )
+
     st.markdown("""
-    <div class="ypf-header" style="padding: 1.25rem 1.75rem; margin-bottom: 1rem;">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; position: relative; z-index: 1;">
-            <div>
-                <h1 style="color: #FFF; font-size: 1.35rem; margin: 0; letter-spacing: -0.03em;">YPF BI Monitor</h1>
-                <p style="color: #94A3B8; font-size: 0.82rem; margin: 0.15rem 0 0 0;">Suite integrada de herramientas para Power BI</p>
-            </div>
-            <div style="display: flex; gap: 2rem;">
-                <div style="text-align: center;">
-                    <div style="font-size: 1.3rem; font-weight: 700; color: #0451E4; letter-spacing: -0.03em;">4</div>
-                    <div style="font-size: 0.6rem; font-weight: 500; color: #64748B; text-transform: uppercase; letter-spacing: 0.08em;">Tools</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 1.3rem; font-weight: 700; color: #0451E4; letter-spacing: -0.03em;">PBIP</div>
-                    <div style="font-size: 0.6rem; font-weight: 500; color: #64748B; text-transform: uppercase; letter-spacing: 0.08em;">Formato</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 1.3rem; font-weight: 700; color: #0451E4; letter-spacing: -0.03em;">DAX</div>
-                    <div style="font-size: 0.6rem; font-weight: 500; color: #64748B; text-transform: uppercase; letter-spacing: 0.08em;">Optimizer</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 1.3rem; font-weight: 700; color: #0451E4; letter-spacing: -0.03em;">DOCX</div>
-                    <div style="font-size: 0.6rem; font-weight: 500; color: #64748B; text-transform: uppercase; letter-spacing: 0.08em;">Docs</div>
-                </div>
-            </div>
-        </div>
-        <span class="version" style="position: relative; z-index: 1;">v1.0</span>
-    </div>
-    """, unsafe_allow_html=True)
+    ### Bienvenido a YPF BI Monitor
 
-    # Feature cards - 2x2 compact
+    Esta suite integra **5 herramientas especializadas** para analisis, documentacion y optimizacion
+    de reportes Power BI.
+    """)
+
     col1, col2 = st.columns(2)
 
     with col1:
-        _card(
-            "analyzer",
+        _render_card(
             "Power BI Analyzer",
-            "Analisis de proyectos PBIP con score de calidad, metricas y recomendaciones.",
-            ["Tablas, relaciones y medidas DAX", "Score de calidad y recomendaciones", "Export HTML / JSON"]
+            "Analisis completo de proyectos PBIP con metricas detalladas, visualizaciones interactivas y exportacion.",
+            [
+                "Analisis de tablas, relaciones y medidas",
+                "Evaluacion de paginas y visuales",
+                "Recomendaciones de optimizacion"
+            ]
         )
-        _card(
-            "docgen",
+        _render_card(
             "Documentation Generator",
-            "Documentacion tecnica-funcional en Word con template corporativo YPF.",
-            ["Parseo PBIP/TMDL", "Secciones configurables", "Imagenes y diagramas ER"]
+            "Generacion automatica de documentacion tecnica-funcional en Word usando template corporativo.",
+            [
+                "Lectura de archivos PBIP",
+                "Formularios con campos autocompletables",
+                "Soporte para imagenes y diagramas ER"
+            ]
+        )
+        _render_card(
+            "Layout Organizer",
+            "Organizacion automatica de diagramas de modelo Power BI en layouts limpios y optimizados.",
+            [
+                "Star y Grid layouts",
+                "Deteccion de snowflake dimensions",
+                "Creacion de tabs focalizados"
+            ]
         )
 
     with col2:
-        _card(
-            "layout",
-            "Layout Organizer",
-            "Reorganizacion del diagrama del modelo semantico en layouts optimizados.",
-            ["Star schema y Grid layouts", "Deteccion snowflake dimensions", "Tabs por dominio"]
-        )
-        _card(
-            "dax",
+        _render_card(
             "DAX Optimizer",
-            "Analisis estatico de medidas DAX con deteccion de patrones y mejores practicas.",
-            ["Deteccion de medidas complejas", "Ranking por criticidad", "Filtrado de comentarios DAX"]
+            "Analisis y optimizacion de medidas DAX con recomendaciones de rendimiento y mejores practicas.",
+            [
+                "Deteccion de medidas complejas",
+                "Ranking de optimizacion",
+                "Visualizaciones de analisis"
+            ]
+        )
+        _render_card(
+            "Usage Dashboard",
+            "Dashboard de metricas y estadisticas de uso de todas las herramientas de la suite (solo admins).",
+            [
+                "Tracking de eventos por usuario",
+                "Metricas de uso por app",
+                "Analisis temporal"
+            ]
         )
 
     st.markdown("---")
 
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("""
-        **Como Usar** -- Selecciona una herramienta en el menu lateral,
-        indica la ruta del archivo `.pbip` y revisa los resultados.
-        """)
-    with c2:
-        st.markdown("""
-        **Soporte** -- Interfaz unificada, logging por usuario,
-        identidad corporativa YPF. Contacto: IT Analytics.
-        """)
+    # How to use - compact
+    st.markdown("""
+    ### Como Usar
+    1. **Selecciona una herramienta** en el menu lateral izquierdo
+    2. **Sigue las instrucciones** especificas de cada aplicacion
+    3. **Todas las acciones quedan registradas** para analisis de uso
+    """)
 
+    st.markdown("---")
     render_footer()

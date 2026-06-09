@@ -1,16 +1,18 @@
-import subprocess
-import sys
+#!/usr/bin/env python3
+"""CML Launch Script — starts YPF BI Monitor on CDSW_APP_PORT."""
+
 import os
+import subprocess
 
-print("Installing dependencies from requirements.txt...")
-subprocess.run([
-    sys.executable, "-m", "pip", "install", 
-    "-q", "-r", "requirements.txt"
-], check=True)
+port = os.environ.get("CDSW_APP_PORT", "8501")
 
-print(f"Starting Streamlit on port {os.getenv('CDSW_APP_PORT', '8080')}...")
+print(f"🚀 Starting YPF BI Monitor on port {port}...")
+
 subprocess.run([
     "streamlit", "run", "main.py",
-    "--server.port", os.getenv("CDSW_APP_PORT", "8080"),
-    "--server.address", "127.0.0.1"
+    f"--server.port={port}",
+    "--server.address=127.0.0.1",
+    "--server.headless=true",
+    "--server.enableCORS=false",
+    "--browser.gatherUsageStats=false",
 ])
