@@ -421,6 +421,10 @@ class PBIXAnalyzer:
                 if rel_id not in found_relationships:
                     found_relationships.add(rel_id)
 
+                    auto_prefixes = ('LocalDateTable_', 'DateTableTemplate_')
+                    if from_table.strip().startswith(auto_prefixes) or to_table.strip().startswith(auto_prefixes):
+                        continue
+
                     # Buscar crossFilteringBehavior en contexto cercano (500 chars antes y después)
                     start_pos = max(0, match.start() - 500)
                     end_pos = min(len(datamodel_data), match.end() + 500)
@@ -528,10 +532,19 @@ class PBIXAnalyzer:
 
         self.metrics['complex_dax_measures'] = complex_measures
 
-        # Relaciones
-        relationships = model.get('relationships', [])
+        # Relaciones (filtrar auto date/time)
+        all_relationships = model.get('relationships', [])
+        auto_prefixes = ('LocalDateTable_', 'DateTableTemplate_')
+        relationships = [
+            rel for rel in all_relationships
+            if not rel.get('fromTable', '').startswith(auto_prefixes)
+            and not rel.get('toTable', '').startswith(auto_prefixes)
+        ]
+        filtered_count = len(all_relationships) - len(relationships)
         self.metrics['total_relationships'] = len(relationships)
-        print(f"DEBUG: Encontradas {len(relationships)} relaciones")
+        if filtered_count > 0:
+            print(f"DEBUG: {len(all_relationships)} relaciones totales, {filtered_count} auto date/time filtradas")
+        print(f"DEBUG: {len(relationships)} relaciones de usuario")
 
         # Relaciones bidireccionales
         bidirectional = []
@@ -637,24 +650,14 @@ class PBIXAnalyzer:
             return 'critical', 30
 
     def _calculate_score(self):
-        """Calcula el score general del reporte (0-100) y el breakdown por categoría.
-
-        Sistema de 4 dimensiones de calidad (v2.0):
-          - Modelo Semántico          (35%)
-          - DAX / Performance         (25%)
-          - Diseño del Reporte        (25%)
-          - Gobernanza / Mant.        (15%)
-
-        Emite:
-          - self.metrics['overall_score']    -> int 0-100
-          - self.metrics['score_category']   -> 'excellent' | 'good' | 'warning' | 'poor'
-          - self.metrics['metric_scores']    -> dict métrica -> {value, status, score}
-          - self.metrics['category_scores']  -> dict categoría -> {label, weight, score, status, metrics}
-        """
+        """Calcula el score general del reporte (0-100)"""
         weights = self.config.get('weights', {})
-        categories_cfg = self.config.get('categories', {})
+        total_score = 0
+        total_weight = 0
 
-        # Mapeo: clave interna de métrica  ->  clave en YAML (weights / thresholds)
+        metric_scores = {}
+
+        # Mapeo de métricas a claves de configuración
         metric_mapping = {
             'max_visuals_per_page': 'visualizations_per_page',
             'max_filters_per_page': 'filters_per_page',
@@ -669,78 +672,39 @@ class PBIXAnalyzer:
             'model_size_mb': 'model_size_mb',
         }
 
-        # 1) Calcular score individual por métrica (sólo las disponibles)
-        metric_scores = {}
         for metric_key, config_key in metric_mapping.items():
             if metric_key in self.metrics and config_key in weights:
                 value = self.metrics[metric_key]
+
+                # Ignorar métricas no disponibles (None)
                 if value is None:
                     continue
+
                 status, score = self._evaluate_metric(config_key, value)
+
                 metric_scores[config_key] = {
                     'value': value,
                     'status': status,
-                    'score': score,
+                    'score': score
                 }
+
+                weight = weights[config_key]
+                total_score += score * weight
+                total_weight += weight
+
         self.metrics['metric_scores'] = metric_scores
+        self.metrics['overall_score'] = round(total_score / total_weight if total_weight > 0 else 0, 2)
 
-        # 2) Calcular score por categoría (promedio ponderado de sus métricas disponibles)
-        category_scores = {}
-        weighted_total = 0.0
-        weight_total = 0.0
-
-        for cat_key, cat_def in categories_cfg.items():
-            cat_metrics = cat_def.get('metrics', []) or []
-            sum_w = 0.0
-            sum_sw = 0.0
-            present = []
-            for m_key in cat_metrics:
-                if m_key in metric_scores:
-                    w = weights.get(m_key, 0)
-                    sum_w += w
-                    sum_sw += metric_scores[m_key]['score'] * w
-                    present.append(m_key)
-
-            if sum_w > 0:
-                cat_score = round(sum_sw / sum_w, 2)
-                cat_status = self._score_to_status(cat_score)
-            else:
-                cat_score = None
-                cat_status = 'unavailable'
-
-            category_scores[cat_key] = {
-                'label': cat_def.get('label', cat_key),
-                'icon': cat_def.get('icon', ''),
-                'description': cat_def.get('description', ''),
-                'weight': cat_def.get('weight', 0),
-                'score': cat_score,
-                'status': cat_status,
-                'metrics_present': present,
-                'metrics_defined': cat_metrics,
-            }
-
-            if cat_score is not None:
-                cat_weight = cat_def.get('weight', 0)
-                weighted_total += cat_score * cat_weight
-                weight_total += cat_weight
-
-        self.metrics['category_scores'] = category_scores
-
-        # 3) Score global = promedio ponderado de las categorías disponibles
-        overall = round(weighted_total / weight_total, 2) if weight_total > 0 else 0
-        self.metrics['overall_score'] = overall
-        self.metrics['score_category'] = self._score_to_status(overall)
-
-    def _score_to_status(self, score: float) -> str:
-        """Mapea un score 0-100 al status alineado con umbrales del Fixer (90/75/60)."""
-        scoring = self.config.get('scoring', {})
-        if score >= scoring.get('excellent', 90):
-            return 'excellent'
-        elif score >= scoring.get('good', 75):
-            return 'good'
-        elif score >= scoring.get('warning', 60):
-            return 'warning'
-        return 'poor'
+        # Determinar categoría
+        score = self.metrics['overall_score']
+        if score >= self.config.get('scoring', {}).get('excellent', 90):
+            self.metrics['score_category'] = 'excellent'
+        elif score >= self.config.get('scoring', {}).get('good', 75):
+            self.metrics['score_category'] = 'good'
+        elif score >= self.config.get('scoring', {}).get('warning', 60):
+            self.metrics['score_category'] = 'warning'
+        else:
+            self.metrics['score_category'] = 'poor'
 
     def _generate_recommendations(self):
         """Genera recomendaciones basadas en los hallazgos"""
