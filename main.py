@@ -24,7 +24,7 @@ if _env_path.exists():
 
 # Import apps
 from apps import home, powerbi_analyzer, documentation_generator, layout_organizer
-from apps import dax_optimizer, usage_dashboard
+from apps import dax_optimizer, usage_dashboard, performance_analyzer
 
 # Import shared logger
 from shared.usage_logger import UsageLogger
@@ -198,6 +198,7 @@ with st.sidebar:
         "Documentation Generator",
         "Layout Organizer",
         "DAX Optimizer",
+        "Performance Analyzer",
         "Usage Dashboard",
     ]
 
@@ -257,6 +258,8 @@ try:
         layout_organizer.render_app(logger)
     elif page == "DAX Optimizer":
         dax_optimizer.render_app(logger)
+    elif page == "Performance Analyzer":
+        performance_analyzer.render_app(logger)
     elif page == "Usage Dashboard":
         usage_dashboard.render_app(logger)
 except Exception as e:
