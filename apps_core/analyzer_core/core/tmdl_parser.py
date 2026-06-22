@@ -223,14 +223,31 @@ class TMDLParser:
         columns = self._parse_columns(content, table_name)
         table['columns'] = columns
 
-        # Detectar si es tabla calculada (tiene partition con expression)
-        if 'partition' in content and 'mode: import' in content:
-            # Buscar si tiene expression
-            if re.search(r'partition.*?\n\s+mode:\s+import\n\s+source\s+=', content, re.DOTALL):
-                table['partitions'].append({
-                    'name': table_name,
-                    'mode': 'import'
-                })
+        # Parsear TODAS las partitions con su mode (no solo calculadas).
+        # Formato TMDL:  partition <name> = m | calculated | calculationGroup
+        #                    mode: import | directQuery | dual | inMemory
+        partition_iter = re.finditer(
+            r"partition\s+['\"]?([^'\"=\n]+?)['\"]?\s*=\s*(\w+)\s*\n"
+            r"(?:[^\S\n]+[^\n]*\n)*?"
+            r"[^\S\n]+mode:\s*(\w+)",
+            content,
+        )
+        for m in partition_iter:
+            p_name = m.group(1).strip()
+            p_kind = m.group(2).strip()    # m / calculated / calculationGroup
+            p_mode = m.group(3).strip()    # import / directQuery / dual
+            table['partitions'].append({
+                'name': p_name,
+                'kind': p_kind,
+                'mode': p_mode,
+            })
+
+        # Storage mode efectivo de la tabla = el de su primera partition
+        # (TMDL permite múltiples partitions; en práctica el modo es uniforme).
+        if table['partitions']:
+            table['storageMode'] = table['partitions'][0]['mode']
+        else:
+            table['storageMode'] = 'unknown'
 
         return table
 
