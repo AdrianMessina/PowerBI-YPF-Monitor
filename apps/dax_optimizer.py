@@ -219,67 +219,25 @@ def render_app(logger):
     
     
     def render_file_upload():
-        """Renderiza la sección de carga de archivo o carpeta PBIP"""
-        with st.expander("📁 Cargar archivo PBIP", expanded=True):
+        """Renderiza la sección de carga de archivo PBIP (solo ZIP upload)"""
+        with st.expander("📁 Cargar proyecto PBIP", expanded=True):
             st.info("""
-            **ℹ️ Estructura de archivos PBIP:**
-    
-            Cuando guardas un archivo como PBIP en Power BI Desktop, se generan:
-            - 📄 Un archivo `.pbip` (archivo de configuración JSON)
-            - 📁 Una carpeta `.SemanticModel` (contiene el modelo de datos)
-            - 📁 Una carpeta `.Report` (contiene el reporte)
-    
-            **Puedes pegar la ruta a cualquiera de estos:**
-            1. La ruta al archivo `.pbip` (Ejemplo: `C:\\Users\\...\\MiReporte.pbip`)
-            2. La ruta a la carpeta `.SemanticModel` (Ejemplo: `C:\\Users\\...\\MiReporte.SemanticModel`)
-            3. La ruta a la carpeta padre que contiene todo
+            **ℹ️ Cómo subir tu proyecto Power BI:**
+
+            1. En Power BI Desktop, guarda tu reporte como **Power BI Project (.pbip)**
+            2. Esto genera una carpeta con archivos `.pbip`, `.Report/` y `.SemanticModel/`
+            3. **Comprimí toda la carpeta en un archivo ZIP**
+            4. Subilo abajo
             """)
-    
-            # Opción 1: Ruta a archivo/carpeta PBIP (recomendado)
-            st.markdown("**Opción 1: Pegar ruta** (Recomendado)")
-            pbip_folder_path = st.text_input(
-                "Pega la ruta completa al archivo .pbip o a la carpeta .SemanticModel",
-                placeholder=r"C:\Users\...\MiReporte.pbip",
-                help="Copia y pega la ruta completa al archivo .pbip. ✅ Puedes pegar la ruta CON comillas, la aplicación las detecta automáticamente."
-            )
-    
-            # Nota sobre comillas
-            st.success("✅ **Nota importante:** Si al copiar la ruta esta incluye comillas (como `\"C:\\Users\\...\\archivo.pbip\"`), ¡no te preocupes! La aplicación las reconoce y procesa correctamente.")
-    
-            # Mostrar instrucciones de cómo copiar la ruta
-            with st.expander("💡 ¿Cómo copiar la ruta del archivo?"):
-                st.markdown("""
-                **Opción A: Desde el Explorador de Windows**
-                1. Abre el Explorador de Windows
-                2. Navega hasta la carpeta que contiene tu archivo `.pbip`
-                3. **SHIFT + Click derecho** en el archivo `.pbip` → **Copiar como ruta de acceso**
-                4. Pega la ruta arriba ✅ **(se copiará con comillas, la app las procesa automáticamente)**
-    
-                **Opción B: Desde la barra de direcciones**
-                1. Abre el Explorador de Windows
-                2. Navega hasta la carpeta que contiene tu archivo `.pbip`
-                3. Click en la barra de direcciones arriba → Copiar
-                4. Pega la ruta arriba y agrega `\\NombreDeArchivo.pbip` al final
-    
-                **Ejemplo de ruta válida:**
-                ```
-                C:\\Users\\TuUsuario\\Documentos\\MiProyecto\\Reporte.pbip
-                ```
-                O con comillas:
-                ```
-                "C:\\Users\\TuUsuario\\Documentos\\MiProyecto\\Reporte.pbip"
-                ```
-                """)
-    
-            # Opción 2: Archivo ZIP (alternativa)
-            st.markdown("**Opción 2: Subir archivo ZIP** (Alternativa)")
+
             uploaded_file = st.file_uploader(
-                "O selecciona un archivo .zip si comprimiste el PBIP",
+                "Selecciona el archivo .zip de tu proyecto PBIP",
                 type=['zip'],
-                help="Si comprimiste todas las carpetas PBIP en un archivo ZIP, súbelo aquí"
+                help="ZIP conteniendo la carpeta .SemanticModel con definition/ y archivos .tmdl"
             )
-    
-        return pbip_folder_path, uploaded_file
+
+        # Mantenemos compatibilidad con el resto del código (pbip_folder_path siempre None)
+        return None, uploaded_file
     
     
     def export_measures_to_csv(ranked_measures):
@@ -1036,30 +994,15 @@ def render_app(logger):
             </div>
             """, unsafe_allow_html=True)
     
-        # Upload de archivo o ruta de carpeta
-        pbip_folder_path, uploaded_file = render_file_upload()
-    
+        # Upload de archivo ZIP
+        _, uploaded_file = render_file_upload()
+
         # Determinar qué opción usar
         file_to_analyze = None
         temp_file_path = None
-    
-        if pbip_folder_path and pbip_folder_path.strip():
-            # Opción 1: Ruta a archivo/carpeta PBIP
-            pbip_path = pbip_folder_path.strip()
-    
-            # Remover comillas si las hay (común al copiar ruta con Shift+Click derecho)
-            if pbip_path.startswith('"') and pbip_path.endswith('"'):
-                pbip_path = pbip_path[1:-1]
-            elif pbip_path.startswith("'") and pbip_path.endswith("'"):
-                pbip_path = pbip_path[1:-1]
-    
-            if os.path.exists(pbip_path):
-                file_to_analyze = pbip_path
-            else:
-                st.error(f"⚠️ La ruta '{pbip_path}' no existe. Verifica que la ruta sea correcta.")
-    
-        elif uploaded_file is not None:
-            # Opción 2: Archivo subido
+
+        if uploaded_file is not None:
+            # Archivo ZIP subido
             temp_file_path = os.path.join(os.getcwd(), uploaded_file.name)
             with open(temp_file_path, 'wb') as f:
                 f.write(uploaded_file.getbuffer())
