@@ -85,7 +85,23 @@ def extract_measures_from_pbip(file_path: str) -> List[Dict]:
                 try:
                     with zipfile.ZipFile(file_path, 'r') as zip_ref:
                         zip_ref.extractall(temp_dir)
-                    definition_path = os.path.join(temp_dir, 'definition')
+
+                    # Buscar carpeta 'definition' recursivamente en el ZIP extraído
+                    # Estructura típica: temp_dir/NombreProyecto.SemanticModel/definition/
+                    definition_path = None
+                    for root, dirs, files in os.walk(temp_dir):
+                        if 'definition' in dirs:
+                            candidate = os.path.join(root, 'definition')
+                            # Verificar que es la carpeta correcta (debe tener model.tmdl o database.tmdl)
+                            if any(f.endswith('.tmdl') or f == 'model.bim'
+                                   for f in os.listdir(candidate)):
+                                definition_path = candidate
+                                break
+
+                    if not definition_path:
+                        # Fallback: buscar directamente en raíz
+                        definition_path = os.path.join(temp_dir, 'definition')
+
                 except zipfile.BadZipFile:
                     raise ValueError("El archivo no es un ZIP válido ni un archivo .pbip. Si estás intentando cargar un PBIP, asegúrate de pegar la ruta al archivo .pbip o a la carpeta .SemanticModel")
 
@@ -328,17 +344,47 @@ def validate_pbip_file(file_path: str) -> tuple[bool, str]:
 
         # Si es otro tipo de archivo (ZIP)
         elif os.path.isfile(file_path):
+            # Verificar tamaño mínimo del archivo
+            file_size = os.path.getsize(file_path)
+            if file_size < 1024:  # < 1KB es sospechosamente pequeño
+                return False, (
+                    f"El archivo ZIP es demasiado pequeño ({file_size} bytes). "
+                    "Un proyecto PBIP válido debe tener al menos varios KB. "
+                    "Verifica que zipeaste correctamente la carpeta del proyecto."
+                )
+
             # Intentar como ZIP
-            with zipfile.ZipFile(file_path, 'r') as zip_ref:
-                file_list = zip_ref.namelist()
+            try:
+                with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                    file_list = zip_ref.namelist()
 
-                # Buscar carpeta definition
-                has_definition = any('definition' in f for f in file_list)
+                    if not file_list:
+                        return False, "El archivo ZIP está vacío"
 
-                if not has_definition:
-                    return False, "El archivo ZIP no contiene carpeta 'definition'"
+                    # Buscar carpeta definition (en cualquier nivel del path)
+                    has_definition = any('/definition/' in f or f.endswith('/definition') or f.startswith('definition/')
+                                         for f in file_list)
 
-                return True, "Archivo ZIP válido"
+                    # Buscar archivos TMDL (más confiable)
+                    has_tmdl = any(f.endswith('.tmdl') for f in file_list)
+                    has_bim = any(f.endswith('model.bim') for f in file_list)
+
+                    if not has_definition and not has_tmdl and not has_bim:
+                        # Mostrar estructura del ZIP para debug
+                        sample_files = file_list[:5]
+                        return False, (
+                            "El archivo ZIP no contiene una estructura PBIP válida.\n\n"
+                            f"Contenido detectado ({len(file_list)} archivos):\n"
+                            + "\n".join(f"  • {f}" for f in sample_files)
+                            + ("\n  ..." if len(file_list) > 5 else "")
+                            + "\n\nSe esperaba:\n"
+                            "  • Una carpeta '.SemanticModel/definition/' con archivos .tmdl, o\n"
+                            "  • Un archivo 'model.bim'"
+                        )
+
+                    return True, "Archivo ZIP válido"
+            except zipfile.BadZipFile:
+                return False, "El archivo no es un ZIP válido o está corrupto"
         else:
             return False, "La ruta debe ser un archivo .pbip, una carpeta .SemanticModel, o un archivo ZIP"
 
