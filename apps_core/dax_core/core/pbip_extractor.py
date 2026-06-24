@@ -490,7 +490,20 @@ def get_pbip_info(file_path: str) -> Dict:
             cleanup_needed = True
             with zipfile.ZipFile(file_path, 'r') as zip_ref:
                 zip_ref.extractall(temp_dir)
-            definition_path = os.path.join(temp_dir, 'definition')
+
+            # Buscar 'definition' recursivamente
+            # Estructura típica: temp_dir/NombreProyecto.SemanticModel/definition/
+            definition_path = None
+            for root, dirs, files in os.walk(temp_dir):
+                if 'definition' in dirs:
+                    candidate = os.path.join(root, 'definition')
+                    if any(f.endswith('.tmdl') or f == 'model.bim'
+                           for f in os.listdir(candidate)):
+                        definition_path = candidate
+                        break
+
+            if not definition_path:
+                definition_path = os.path.join(temp_dir, 'definition')
 
         # Detectar formato
         model_bim_path = os.path.join(definition_path, 'model.bim')
@@ -516,20 +529,29 @@ def get_pbip_info(file_path: str) -> Dict:
             # Formato TMDL
             info['format'] = 'TMDL (Text)'
 
-            tmdl_path = os.path.join(definition_path, '.tmdl')
-            if not os.path.exists(tmdl_path):
-                tmdl_path = definition_path
+            tmdl_path = definition_path
 
-            # Contar archivos .tmdl
-            tmdl_files = []
-            for root, dirs, files in os.walk(tmdl_path):
-                for file in files:
-                    if file.endswith('.tmdl'):
-                        tmdl_files.append(os.path.join(root, file))
+            # Contar TABLAS reales (archivos en definition/tables/)
+            tables_dir = os.path.join(definition_path, 'tables')
+            if os.path.exists(tables_dir):
+                # Solo contar .tmdl en la carpeta tables/, excluyendo tablas automáticas
+                tmdl_table_files = [
+                    f for f in os.listdir(tables_dir)
+                    if f.endswith('.tmdl')
+                    and not f.startswith('LocalDateTable_')
+                    and not f.startswith('DateTableTemplate_')
+                ]
+                info['tables_count'] = len(tmdl_table_files)
+            else:
+                # Fallback: contar todos los .tmdl (estructura no estándar)
+                tmdl_files = []
+                for root, dirs, files in os.walk(tmdl_path):
+                    for file in files:
+                        if file.endswith('.tmdl'):
+                            tmdl_files.append(os.path.join(root, file))
+                info['tables_count'] = len(tmdl_files)
 
-            info['tables_count'] = len(tmdl_files)
-
-            # Estimar medidas (parsear archivos)
+            # Contar medidas (parsear archivos)
             measures = parse_tmdl_files(tmdl_path)
             info['measures_count'] = len(measures)
 
