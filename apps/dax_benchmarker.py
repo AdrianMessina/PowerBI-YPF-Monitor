@@ -56,15 +56,6 @@ def render_app(logger):
     pbi_status = check_pbi_cli_available()
 
     if not pbi_status['available']:
-        st.warning(
-            f"⚠️ **pbi-cli no disponible**: {pbi_status['error']}\n\n"
-            "Instalá pbi-cli para ejecutar queries reales:\n"
-            "```bash\n"
-            "pipx install pbi-cli-tool\n"
-            "pbi connect\n"
-            "```\n\n"
-            "Modo de simulación disponible para testing."
-        )
         use_simulation = True
     elif not pbi_status['connected']:
         st.info(
