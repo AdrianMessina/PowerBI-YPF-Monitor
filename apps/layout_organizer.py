@@ -570,10 +570,6 @@ def render_app(logger):
         - El radio del Star Layout controla qué tan lejos están las dimensiones del fact central
         - Sin archivo relations.json, la herramienta usará un layout radial simple
     
-        ### Créditos
-    
-        Basado en el proyecto open-source de Irinel47:
-        [https://github.com/Irinel47/pbi-model-layout](https://github.com/Irinel47/pbi-model-layout)
         """)
     
         st.markdown("---")
@@ -596,11 +592,3 @@ def render_app(logger):
         - El archivo debe ser generado desde Power BI Desktop actual
         """)
     
-    # Footer
-    st.markdown("---")
-    st.markdown("""
-    <div style='text-align: center; color: #666;'>
-        <p>Power BI Model Layout Organizer v1.0</p>
-        <p>Desarrollado con ❤️ usando Streamlit</p>
-    </div>
-    """, unsafe_allow_html=True)
