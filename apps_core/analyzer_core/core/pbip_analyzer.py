@@ -243,50 +243,9 @@ class PBIPAnalyzer:
         """Extrae métricas del modelo de datos"""
         model = model_data.get('model', {})
 
-        # Tablas - Categorizar con precisión
-        all_tables = model.get('tables', [])
-
-        # Categorizar todas las tablas por tipo
-        tables_by_type = {
-            'user': [],              # Tablas normales de usuario (import/directquery)
-            'calculated': [],        # Tablas calculadas (creadas con DAX)
-            'auto_datetime_template': [],  # Template de Auto Date/Time
-            'auto_datetime_local': [],     # LocalDateTable generadas automáticamente
-            'system_hidden': []      # Otras tablas ocultas del sistema
-        }
-
-        for table in all_tables:
-            table_type = table.get('tableType', 'user')
-            tables_by_type[table_type].append(table)
-
-        # Tablas de usuario = user + calculated (las que el usuario creó)
-        user_tables = tables_by_type['user'] + tables_by_type['calculated']
-
-        # Contar SOLO tablas de usuario (excluyendo automáticas)
-        self.metrics['total_tables'] = len(user_tables)
-
-        # Guardar desglose detallado para debugging y reporte
-        self.metrics['tables_by_type'] = {
-            'user': len(tables_by_type['user']),
-            'calculated': len(tables_by_type['calculated']),
-            'auto_datetime_template': len(tables_by_type['auto_datetime_template']),
-            'auto_datetime_local': len(tables_by_type['auto_datetime_local']),
-            'system_hidden': len(tables_by_type['system_hidden'])
-        }
-
-        # Logging detallado
-        print(f"DEBUG PBIP: Total {len(all_tables)} tablas encontradas en TMDL:")
-        print(f"   ✓ {len(tables_by_type['user'])} tablas de usuario (import/directquery)")
-        print(f"   ✓ {len(tables_by_type['calculated'])} tablas calculadas (DAX)")
-        print(f"   ✗ {len(tables_by_type['auto_datetime_template'])} templates Auto Date/Time (excluidas)")
-        print(f"   ✗ {len(tables_by_type['auto_datetime_local'])} LocalDateTable automáticas (excluidas)")
-        print(f"   ✗ {len(tables_by_type['system_hidden'])} tablas ocultas del sistema (excluidas)")
-        print(f"   → TOTAL CONTABILIZADO: {len(user_tables)} tablas")
-
-        if tables_by_type['auto_datetime_local']:
-            sample_names = [t.get('name', '?')[:35] for t in tables_by_type['auto_datetime_local'][:3]]
-            print(f"   Ejemplos de LocalDateTable excluidas: {', '.join(sample_names)}...")
-
+        # Tablas
+        tables = model.get('tables', [])
+        self.metrics['total_tables'] = len(tables)
 
         # Medidas DAX
         all_measures = []
@@ -296,8 +255,9 @@ class PBIPAnalyzer:
         calculated_tables = 0
         columns_by_table = {}
 
-        # Iterar SOLO sobre tablas de usuario
-        for table in user_tables:
+        print(f"DEBUG PBIP: Analizando {len(tables)} tablas")
+
+        for table in tables:
             table_name = table.get('name', 'Unknown')
 
             # Contar columnas
@@ -330,8 +290,13 @@ class PBIPAnalyzer:
                         'expression_length': len(str(expr))
                     })
 
-        # Usar categorización precisa para tablas calculadas
-        calculated_tables = len(tables_by_type['calculated'])
+            # Contar tablas calculadas
+            if 'partitions' in table:
+                for partition in table['partitions']:
+                    source = partition.get('source', {})
+                    if source.get('type') == 'calculated' or 'expression' in source:
+                        calculated_tables += 1
+                        break
 
         self.metrics['total_measures'] = len(all_measures)
         self.metrics['measures_by_table'] = measures_by_table
@@ -359,10 +324,19 @@ class PBIPAnalyzer:
 
         self.metrics['complex_dax_measures'] = complex_measures
 
-        # Relaciones
-        relationships = model.get('relationships', [])
+        # Relaciones (filtrar auto date/time)
+        all_relationships = model.get('relationships', [])
+        auto_prefixes = ('LocalDateTable_', 'DateTableTemplate_')
+        relationships = [
+            rel for rel in all_relationships
+            if not rel.get('fromTable', '').startswith(auto_prefixes)
+            and not rel.get('toTable', '').startswith(auto_prefixes)
+        ]
+        filtered_count = len(all_relationships) - len(relationships)
         self.metrics['total_relationships'] = len(relationships)
-        print(f"DEBUG PBIP: Encontradas {len(relationships)} relaciones")
+        if filtered_count > 0:
+            print(f"DEBUG PBIP: {len(all_relationships)} relaciones totales, {filtered_count} auto date/time filtradas")
+        print(f"DEBUG PBIP: {len(relationships)} relaciones de usuario")
 
         # Relaciones bidireccionales
         bidirectional = []
@@ -389,21 +363,27 @@ class PBIPAnalyzer:
 
         self.metrics['auto_date_time_enabled'] = 'Sí' if auto_datetime else 'No'
 
-        # Tamaño del modelo (NO DISPONIBLE en PBIP)
-        # PBIP es solo metadatos, no contiene datos. El tamaño real está en el servicio.
-        # No intentamos estimar porque sería muy impreciso y confunde al usuario.
-        self.metrics['model_size_mb'] = None
-        self.metrics['model_size_note'] = 'N/A - PBIP contiene solo estructura, no datos. Verifica tamaño en Power BI Service.'
+        # ── Storage mode analysis ──────────────────────────────────────
+        print(f"DEBUG: Before storage analysis, len(tables)={len(tables) if tables else 0}")
+        if tables:  # solo si hay tablas parseadas
+            try:
+                from apps_core.analyzer_core.core.storage_mode import analyze_storage
+                print(f"DEBUG: Calling analyze_storage with {len(tables)} tables")
+                storage = analyze_storage(tables)
+                print(f"DEBUG: storage_mode_type = {storage.get('storage_mode_type')}")
+                self.metrics['tables_by_mode'] = storage["tables_by_mode"]
+                self.metrics['storage_mode_type'] = storage["storage_mode_type"]
+                self.metrics['directquery_tables_detail'] = storage["directquery_tables_detail"]
+                self.metrics['directquery_issues'] = storage["directquery_issues"]
+                self.metrics['query_folding_warnings'] = storage["query_folding_warnings"]
+            except Exception as e:
+                print(f"WARNING: storage_mode analysis failed — {type(e).__name__}: {e}")
 
-        # Storage Mode Advisor — analiza distribución import/DQ/composite + anti-patterns
-        try:
-            from .storage_advisor import analyze_storage_modes
-            self.metrics['storage_analysis'] = analyze_storage_modes(
-                user_tables, estimated_size_mb=0.0
-            )
-        except Exception as e:
-            print(f"⚠️  Storage advisor falló: {e}")
-            self.metrics['storage_analysis'] = None
+        # Tamaño del modelo (estimado basado en cantidad de datos)
+        # Esto es solo una estimación ya que el PBIP no contiene los datos
+        estimated_size = len(tables) * 5  # Estimación muy aproximada
+        self.metrics['model_size_mb'] = estimated_size
+        self.metrics['model_size_note'] = 'Estimado (PBIP no contiene datos)'
 
     def _analyze_report(self):
         """Analiza el archivo report.json (visualizaciones, páginas)"""
