@@ -43,67 +43,88 @@ def render_app(logger):
     # Import shared styles (replaces app-specific CSS)
     from apps_core.layout_core.shared_styles import render_app_header, render_footer
 
-    # App-specific styles aligned to Industrial Data Observatory design system
+    # Minimal app-specific CSS (functional styles only - layout comes from shared CSS)
     st.markdown("""
         <style>
-        .score-excellent { color: var(--status-ok); }
-        .score-good { color: var(--status-ok); }
-        .score-warning { color: var(--status-warn); }
-        .score-poor { color: var(--status-danger); }
+        /* Power BI Analyzer - Functional CSS variables */
+        :root {
+            --success-color: #10B981;
+            --warning-color: #F59E0B;
+            --critical-color: #EF4444;
+        }
 
+        /* Score colors */
+        .score-excellent { color: var(--success-color); }
+        .score-good { color: #00D4AA; }
+        .score-warning { color: var(--warning-color); }
+        .score-poor { color: var(--critical-color); }
+
+        /* Badges */
         .badge {
-            padding: 0.25rem 0.7rem;
-            border-radius: var(--radius-full);
-            font-size: 0.7rem;
+            padding: 0.375rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
             font-weight: 600;
             display: inline-block;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            border: 1px solid transparent;
         }
         .badge-success {
-            background: var(--status-ok-bg);
-            color: var(--status-ok);
-            border-color: rgba(16,185,129,0.25);
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(16, 185, 129, 0.2);
         }
         .badge-warning {
-            background: var(--status-warn-bg);
-            color: var(--status-warn);
-            border-color: rgba(245,158,11,0.25);
+            background-color: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+            border: 1px solid rgba(245, 158, 11, 0.2);
         }
         .badge-danger {
-            background: var(--status-danger-bg);
-            color: var(--status-danger);
-            border-color: rgba(209,52,56,0.25);
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--critical-color);
+            border: 1px solid rgba(239, 68, 68, 0.2);
         }
 
+        /* Metric cards */
         .metric-card {
-            background: var(--surface-2);
-            padding: 1.5rem;
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border-default);
-            border-left: 3px solid var(--brand-accent);
-            color: var(--text-secondary);
+            background: white;
+            padding: 1.75rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-left: 4px solid #0451E4;
         }
 
+        /* Tabs - YPF styled */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+            background-color: #E6E6E6;
+            padding: 0.5rem;
+            border-radius: 12px;
+            border-bottom: 3px solid #0451E4;
+        }
+        .stTabs [aria-selected="true"] {
+            background: linear-gradient(135deg, #0451E4 0%, #0340B8 100%);
+            color: #FFFFFF;
+            box-shadow: 0 2px 8px rgba(4, 81, 228, 0.3);
+        }
+
+        /* Loader spinner */
         .ypf-loader-container {
             display: flex;
             flex-direction: row;
             align-items: center;
             justify-content: center;
-            padding: 1.25rem;
-            background: var(--surface-2);
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border-default);
-            border-left: 3px solid var(--brand-accent);
+            padding: 1.5rem;
+            background: rgba(4, 81, 228, 0.03);
+            border-radius: 12px;
+            border: 2px solid #0451E4;
             gap: 1rem;
         }
         .ypf-loader {
-            border: 3px solid var(--surface-3);
-            border-top: 3px solid var(--brand-accent);
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #000000;
+            border-right: 4px solid #0451E4;
             border-radius: 50%;
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
         }
         @keyframes spin {
@@ -112,9 +133,9 @@ def render_app(logger):
         }
         .ypf-loader-text {
             margin: 0;
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 600;
+            color: #000000;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -177,42 +198,41 @@ def render_app(logger):
     
     
     def create_score_gauge(score):
-        """Score gauge — Industrial Data Observatory theme. Thresholds 90/75/60."""
+        """Crea un gauge chart moderno y minimalista para el score"""
         fig = go.Figure(go.Indicator(
             mode="gauge+number",
             value=score,
             domain={'x': [0, 1], 'y': [0, 1]},
             title={
                 'text': "Score General",
-                'font': {'size': 18, 'family': 'Space Grotesk, sans-serif', 'color': '#E8ECF4'}
+                'font': {'size': 22, 'family': 'Inter, sans-serif', 'color': '#2C3E50'}
             },
             number={
-                'font': {'size': 52, 'family': 'JetBrains Mono, monospace', 'color': get_score_color(score)},
+                'font': {'size': 48, 'family': 'Inter, sans-serif', 'color': get_score_color(score)},
                 'suffix': "/100"
             },
             gauge={
                 'axis': {
                     'range': [None, 100],
-                    'tickwidth': 1,
-                    'tickcolor': "#354155",
-                    'tickfont': {'size': 11, 'color': '#8B95A8', 'family': 'JetBrains Mono, monospace'}
+                    'tickwidth': 2,
+                    'tickcolor': "#E1E8ED",
+                    'tickfont': {'size': 12, 'color': '#6B7280'}
                 },
                 'bar': {
                     'color': get_score_color(score),
-                    'thickness': 0.72
+                    'thickness': 0.75
                 },
-                'bgcolor': "#181D2A",
-                'borderwidth': 1,
-                'bordercolor': "#252D3D",
+                'bgcolor': "#F7F9FC",
+                'borderwidth': 0,
                 'steps': [
-                    {'range': [0, 60], 'color': 'rgba(209, 52, 56, 0.18)'},
-                    {'range': [60, 75], 'color': 'rgba(245, 158, 11, 0.18)'},
-                    {'range': [75, 90], 'color': 'rgba(0, 120, 212, 0.18)'},
-                    {'range': [90, 100], 'color': 'rgba(16, 185, 129, 0.20)'}
+                    {'range': [0, 60], 'color': 'rgba(239, 68, 68, 0.1)'},
+                    {'range': [60, 75], 'color': 'rgba(245, 158, 11, 0.1)'},
+                    {'range': [75, 90], 'color': 'rgba(0, 212, 170, 0.1)'},
+                    {'range': [90, 100], 'color': 'rgba(16, 185, 129, 0.1)'}
                 ],
                 'threshold': {
-                    'line': {'color': "#F2C811", 'width': 3},
-                    'thickness': 0.85,
+                    'line': {'color': "#10B981", 'width': 3},
+                    'thickness': 0.8,
                     'value': 90
                 }
             }
@@ -222,44 +242,43 @@ def render_app(logger):
             height=320,
             margin=dict(l=30, r=30, t=60, b=30),
             paper_bgcolor="rgba(0,0,0,0)",
-            font={'color': "#E8ECF4", 'family': "Space Grotesk, sans-serif"}
+            font={'color': "#2C3E50", 'family': "Inter, sans-serif"}
         )
 
         return fig
 
 
     def render_category_breakdown(category_scores: dict):
-        """Renderiza el breakdown del score por las 4 dimensiones de calidad.
+        """Render del breakdown del score por las 4 dimensiones de calidad.
 
-        Cada categoría muestra: peso, score, status badge y barra de progreso.
-        Diseño Industrial Data Observatory — surface cards + accent amarillo.
+        Cada categoría muestra peso, score y status badge. Look corporativo YPF.
         """
         if not category_scores:
             return
 
-        # Orden fijo (modelo primero por peso 35%, luego DAX 25%, diseño 25%, gobernanza 15%)
         ordered_keys = ['modelo_semantico', 'dax_performance', 'diseno_reporte', 'gobernanza']
         ordered = [(k, category_scores[k]) for k in ordered_keys if k in category_scores]
 
-        # Status -> (label corto, color hex, color rgba para fondo)
+        # Status -> (label, color principal, color fondo)
         status_palette = {
             'excellent':   ('Excelente', '#10B981', 'rgba(16,185,129,0.10)'),
-            'good':        ('Bueno',     '#0078D4', 'rgba(0,120,212,0.10)'),
+            'good':        ('Bueno',     '#0451E4', 'rgba(4,81,228,0.10)'),
             'warning':     ('Atención',  '#F59E0B', 'rgba(245,158,11,0.10)'),
-            'poor':        ('Crítico',   '#D13438', 'rgba(209,52,56,0.10)'),
-            'unavailable': ('N/D',       '#5A6478', 'rgba(90,100,120,0.08)'),
+            'poor':        ('Crítico',   '#EF4444', 'rgba(239,68,68,0.10)'),
+            'unavailable': ('N/D',       '#94A3B8', 'rgba(148,163,184,0.10)'),
         }
 
         st.markdown("""
         <div style="display:flex; align-items:baseline; justify-content:space-between;
                     margin: 0.25rem 0 0.85rem 0;">
-            <h4 style="font-family:'Space Grotesk',sans-serif; color:#E8ECF4;
-                       font-size:1rem; font-weight:600; margin:0; letter-spacing:-0.02em;">
+            <h4 style="color:#1E293B; font-family:'Fira Sans',sans-serif;
+                       font-size:1rem; font-weight:600; margin:0; letter-spacing:-0.01em;">
                 Score por Dimensión
             </h4>
-            <span style="font-family:'JetBrains Mono',monospace; color:#5A6478;
-                         font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase;">
-                4 dimensiones · ponderado
+            <span style="color:#94A3B8; font-size:0.7rem; letter-spacing:0.08em;
+                         text-transform:uppercase; font-weight:500;
+                         font-family:'Fira Sans',sans-serif;">
+                4 dimensiones · promedio ponderado
             </span>
         </div>
         """, unsafe_allow_html=True)
@@ -275,46 +294,48 @@ def render_app(logger):
 
             with col:
                 st.markdown(f"""
-                <div style="background:#181D2A; border:1px solid #1A2030;
-                            border-left:3px solid #F2C811; border-radius:10px;
-                            padding:1rem 1.1rem; height:100%; position:relative;
-                            overflow:hidden;">
+                <div style="background:#FFFFFF; border:1px solid #E2E8F0;
+                            border-left:4px solid #0451E4; border-radius:0 8px 8px 0;
+                            padding:1rem 1.1rem; height:100%;
+                            box-shadow:0 2px 8px rgba(0,0,0,0.04); position:relative;">
                     <div style="display:flex; align-items:center; justify-content:space-between;
                                 margin-bottom:0.6rem;">
-                        <span style="font-family:'JetBrains Mono',monospace; color:#F2C811;
-                                     font-size:0.62rem; letter-spacing:0.14em; font-weight:600;
-                                     padding:0.15rem 0.45rem; border-radius:4px;
-                                     background:rgba(242,200,17,0.10); border:1px solid rgba(242,200,17,0.20);">
+                        <span style="color:#0451E4; font-size:0.7rem; letter-spacing:0.08em;
+                                     font-weight:700; padding:0.18rem 0.55rem; border-radius:6px;
+                                     background:rgba(4,81,228,0.08);
+                                     border:1px solid rgba(4,81,228,0.18);
+                                     font-family:'Fira Sans',sans-serif;">
                             {weight_pct}%
                         </span>
-                        <span style="font-family:'JetBrains Mono',monospace; color:{color_hex};
-                                     font-size:0.6rem; letter-spacing:0.10em; font-weight:600;
-                                     padding:0.15rem 0.4rem; border-radius:9999px;
-                                     background:{color_bg}; text-transform:uppercase;">
+                        <span style="color:{color_hex}; font-size:0.65rem; letter-spacing:0.08em;
+                                     font-weight:600; padding:0.18rem 0.5rem; border-radius:9999px;
+                                     background:{color_bg}; text-transform:uppercase;
+                                     font-family:'Fira Sans',sans-serif;">
                             {label_status}
                         </span>
                     </div>
-                    <div style="font-family:'Space Grotesk',sans-serif; color:#E8ECF4;
-                                font-size:0.82rem; font-weight:600; letter-spacing:-0.01em;
-                                line-height:1.25; margin-bottom:0.5rem; min-height:2.1rem;">
+                    <div style="color:#1E293B; font-family:'Fira Sans',sans-serif;
+                                font-size:0.88rem; font-weight:600; letter-spacing:-0.01em;
+                                line-height:1.3; margin-bottom:0.55rem; min-height:2.3rem;">
                         {cat['label']}
                     </div>
-                    <div style="font-family:'JetBrains Mono',monospace; color:{color_hex};
-                                font-size:1.85rem; font-weight:600; line-height:1;
-                                margin-bottom:0.6rem;">
-                        {score_display}<span style="color:#5A6478; font-size:0.85rem; margin-left:2px;">/100</span>
+                    <div style="color:{color_hex}; font-family:'Fira Sans',sans-serif;
+                                font-size:2rem; font-weight:700; line-height:1;
+                                margin-bottom:0.65rem;">
+                        {score_display}<span style="color:#94A3B8; font-size:0.9rem;
+                                                     font-weight:500; margin-left:2px;">/100</span>
                     </div>
-                    <div style="background:#0B0E14; border-radius:9999px; height:5px;
-                                overflow:hidden; border:1px solid #1A2030;">
+                    <div style="background:#F1F5F9; border-radius:9999px; height:6px;
+                                overflow:hidden;">
                         <div style="width:{bar_width}%; height:100%;
-                                    background:linear-gradient(90deg, {color_hex} 0%, {color_hex}cc 100%);
+                                    background:linear-gradient(90deg, {color_hex} 0%, {color_hex}dd 100%);
                                     border-radius:9999px;
                                     transition:width 400ms cubic-bezier(0.16,1,0.3,1);"></div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-    
-    
+
+
     def create_metrics_comparison_chart(metric_scores, metrics):
         """Crea un gráfico de barras moderno comparando valores actuales vs thresholds"""
     
@@ -774,49 +795,21 @@ def render_app(logger):
     
             with col1:
                 st.markdown("#### Tablas del Modelo")
-
-                # Obtener desglose de tablas si está disponible
-                tables_by_type = metrics.get('tables_by_type', {})
-                total_tables = metrics.get('total_tables', 0)
-
                 # Usar nueva función con thresholds
                 display_metric_with_threshold(
                     "Total de Tablas",
-                    total_tables,
+                    metrics.get('total_tables', 0),
                     thresholds.get('tables_in_model')
                 )
-
-                # Mostrar desglose si está disponible
-                if tables_by_type and any(tables_by_type.values()):
-                    user_count = tables_by_type.get('user', 0)
-                    calc_count = tables_by_type.get('calculated', 0)
-                    auto_template = tables_by_type.get('auto_datetime_template', 0)
-                    auto_local = tables_by_type.get('auto_datetime_local', 0)
-                    system_hidden = tables_by_type.get('system_hidden', 0)
-                    total_in_tmdl = user_count + calc_count + auto_template + auto_local + system_hidden
-
-                    with st.expander("📋 Ver desglose detallado de tablas"):
-                        st.markdown(f"""
-**Tablas contabilizadas ({total_tables}):**
-- ✅ {user_count} tablas de datos (Import/DirectQuery)
-- ✅ {calc_count} tablas calculadas (DAX)
-
-**Excluidas (automáticas de Power BI):**
-- ❌ {auto_template} DateTableTemplate (Auto Date/Time)
-- ❌ {auto_local} LocalDateTable (generadas por columnas de fecha)
-- ❌ {system_hidden} tablas ocultas del sistema
-
-**Total en archivos TMDL:** {total_in_tmdl} tablas
-                        """)
-
+    
                 st.markdown("---")
-
+    
                 display_metric_with_threshold(
                     "Columnas Calculadas",
                     metrics.get('calculated_columns', 0),
                     thresholds.get('calculated_columns')
                 )
-
+    
                 st.markdown("---")
                 st.metric("Tablas Calculadas", metrics.get('calculated_tables', 0))
     
@@ -1660,7 +1653,81 @@ def render_app(logger):
                             with st.expander("🔖 Ver detalle de bookmarks"):
                                 for bm in bookmarks_detail:
                                     st.write(f"- **{bm['name']}** → {bm['page']}")
-    
+
+                    # ===== NUEVA SECCIÓN: STORAGE MODE ANALYSIS (v2.0) =====
+                    if model_available:
+                        st.markdown("---")
+                        st.markdown("### 🔗 Storage Mode & DirectQuery")
+
+                        tables_by_mode = metrics.get('tables_by_mode', {})
+                        storage_type = metrics.get('storage_mode_type', 'import')
+                        dq_issues = metrics.get('directquery_issues', [])
+                        dq_detail = metrics.get('directquery_tables_detail', [])
+                        folding_warnings = metrics.get('query_folding_warnings', [])
+
+                        if tables_by_mode:
+                            total_tables_sm = sum(tables_by_mode.values())
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                n_import = tables_by_mode.get('import', 0)
+                                pct_import = (n_import / total_tables_sm * 100) if total_tables_sm else 0
+                                st.metric("📦 Import", n_import)
+                                st.caption(f"{pct_import:.0f}% del modelo")
+                            with col2:
+                                n_dq = tables_by_mode.get('directQuery', 0)
+                                pct_dq = (n_dq / total_tables_sm * 100) if total_tables_sm else 0
+                                st.metric("🔗 DirectQuery", n_dq)
+                                st.caption(f"{pct_dq:.0f}% del modelo")
+                            with col3:
+                                n_dual = tables_by_mode.get('dual', 0)
+                                pct_dual = (n_dual / total_tables_sm * 100) if total_tables_sm else 0
+                                st.metric("🔄 Dual", n_dual)
+                                st.caption(f"{pct_dual:.0f}% del modelo")
+
+                            # Arquitectura del modelo
+                            st.markdown("---")
+                            type_labels = {
+                                "import": ("📦 Import puro", "#107C10"),
+                                "directQuery": ("🔗 DirectQuery puro", "#F59E0B"),
+                                "composite": ("🔀 Composite Model", "#3B82F6"),
+                            }
+                            label, color = type_labels.get(storage_type, ("? Desconocido", "#5A6478"))
+                            st.markdown(f"**Arquitectura del modelo:** {label}")
+
+                            # Issues críticos
+                            critical = [i for i in dq_issues if i.get('severity') == 'critical']
+                            warnings = [i for i in dq_issues if i.get('severity') == 'warning']
+
+                            if critical:
+                                st.error(f"🔴 {len(critical)} error(es) crítico(s) en tablas DirectQuery")
+                                with st.expander("Ver issues críticos"):
+                                    for i in critical[:10]:
+                                        col_str = f" · `{i['column']}`" if i.get('column') else ""
+                                        st.markdown(f"**{i['issue']}** — `{i['table']}`{col_str}")
+                                        st.caption(i.get('detail', ''))
+
+                            if warnings:
+                                st.warning(f"🟡 {len(warnings)} función(es) DAX con soporte limitado en DirectQuery")
+
+                            if folding_warnings:
+                                st.warning(f"⚠️ {len(folding_warnings)} anti-pattern(s) en M code que rompen query folding")
+
+                            # Tablas DirectQuery detail
+                            if dq_detail:
+                                with st.expander(f"🔗 Ver {len(dq_detail)} tablas DirectQuery/Dual"):
+                                    for t in dq_detail[:15]:
+                                        st.markdown(f"**{t['name']}** — mode: `{t['mode']}`")
+                                        if t.get('n_calculated_columns', 0) > 0:
+                                            st.caption(f"❌ {t['n_calculated_columns']} columna(s) calculada(s) — ERROR CRÍTICO")
+                                        if t.get('source_snippet'):
+                                            st.code(t['source_snippet'][:150] + "..." if len(t['source_snippet']) > 150 else t['source_snippet'], language='powerquery')
+
+                            # Todo OK
+                            if not dq_issues and not folding_warnings and not dq_detail:
+                                st.success("✓ Storage mode saludable — modelo Import puro sin issues de DirectQuery")
+                        else:
+                            st.info("No se detectaron tablas con storage mode information.")
+
                 with tab2:
                     st.markdown("## Métricas Detalladas")
     
