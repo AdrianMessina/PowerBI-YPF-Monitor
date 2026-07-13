@@ -1138,36 +1138,15 @@ def render_app(logger):
                 - El analizador detectará todas las carpetas del proyecto automáticamente
                 """)
 
-        st.markdown("**📋 Paso a paso para copiar la ruta:**")
+        # PBIP File Selection - Cloud-ready (ZIP upload)
+        from shared.pbip_loader import PBIPLoader
 
-        st.markdown("""
-        <div style='background-color: #0451E4;
-                    padding: 0.75rem 1rem;
-                    border-radius: 6px;
-                    border: 2px solid #000000;
-                    margin: 1rem 0;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
-            <p style='color: #000; margin: 0; font-weight: 700; font-size: 0.85rem;'>
-                ⚠️ IMPORTANTE: Copia el archivo .pbip, NO la carpeta
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+        pbip_storage = "/home/cdsw/pbip_projects"
+        loader = PBIPLoader(storage_path=pbip_storage)
+        file_to_analyze = loader.render_uploader(key="analyzer_pbip_uploader")
 
-        st.markdown("""
-        1. 📂 Abre el **Explorador de Windows**
-        2. 🔍 Navega hasta la carpeta de tu proyecto
-        3. 📄 Busca el archivo que termina en **`.pbip`** (ícono de Power BI)
-        4. ➡️ Click derecho en el archivo → **Copiar como ruta de acceso**
-        5. 📋 **Pega** la ruta en el campo de abajo (Ctrl+V)
-
-        **Nota:** Windows agregará comillas automáticamente - ¡no te preocupes! El analizador las quitará.
-        """)
-
-        pbip_path = st.text_input(
-            "Ruta del archivo .pbip:",
-            placeholder=r'C:\Users\TuUsuario\MiCarpeta\MiReporte.pbip',
-            help="Pega la ruta completa del archivo .pbip (puede incluir comillas). Ejemplo: \"C:\\Proyectos\\MiReporte.pbip\""
-        )
+        if not file_to_analyze:
+            st.stop()
 
         # Warning about file naming consistency
         st.markdown("""
@@ -1177,42 +1156,6 @@ def render_app(logger):
             ⚠️ <strong>Mantén el mismo nombre del archivo</strong> entre analisis para que el Usage Dashboard pueda comparar el score antes/despues.
         </div>
         """, unsafe_allow_html=True)
-
-        # Validación mejorada - ARREGLADA para aceptar archivos .pbip
-        if pbip_path:
-            # Limpiar espacios y comillas (automáticas de Windows)
-            pbip_path = pbip_path.strip().strip('"').strip("'")
-
-            if not os.path.exists(pbip_path):
-                st.error("❌ La ruta ingresada no existe. Verifica que la ruta sea correcta.")
-                st.warning("💡 **Tip**: Copia la ruta completa desde el Explorador de Windows (Ctrl+C en la barra de direcciones)")
-                file_to_analyze = None
-            elif os.path.isfile(pbip_path):
-                # Es un archivo - verificar si es .pbip
-                if pbip_path.endswith('.pbip'):
-                    st.success("✅ Archivo PBIP detectado correctamente")
-                    st.info("📁 El analizador buscará automáticamente las carpetas .Report y .SemanticModel")
-                    file_to_analyze = pbip_path
-                else:
-                    st.error("❌ El archivo debe tener extensión .pbip")
-                    st.info("💡 Busca el archivo que termina en `.pbip` en la carpeta de tu proyecto")
-                    file_to_analyze = None
-            elif os.path.isdir(pbip_path):
-                # Es una carpeta
-                if pbip_path.endswith('.Report') or pbip_path.endswith('.SemanticModel') or pbip_path.endswith('.Dataset'):
-                    st.success("✅ Carpeta de proyecto PBIP detectada")
-                    st.info("📁 Se analizarán automáticamente las carpetas .Report y .SemanticModel")
-                    file_to_analyze = pbip_path
-                else:
-                    # Ruta genérica, intentar de todas formas
-                    st.warning("⚠️ La carpeta no tiene una extensión PBIP reconocida (.Report, .SemanticModel)")
-                    st.info("ℹ️ Se intentará analizar de todas formas. Si contiene carpetas del proyecto, funcionará.")
-                    file_to_analyze = pbip_path
-            else:
-                st.error("❌ La ruta no es válida")
-                file_to_analyze = None
-        else:
-            file_to_analyze = None
     
         if file_to_analyze:
             try:
