@@ -10,7 +10,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from apps_core.layout_core.shared_styles import render_app_header, render_footer
-from shared.auth import Authenticator
+# from shared.auth import Authenticator
 
 
 def detect_app(event_name):
@@ -91,12 +91,12 @@ def render_app(logger):
     )
 
     # Require authentication
-#     auth = Authenticator()
-#     if not auth.require_auth(admin_only=False):
-#         render_footer()
-#         return
-# 
-#     auth.render_user_info()
+# #     auth = Authenticator()
+# #     if not auth.require_auth(admin_only=False):
+# #         render_footer()
+# #         return
+# # 
+# #     auth.render_user_info()
 
     # Warning about file naming
     st.markdown("""
