@@ -410,70 +410,157 @@ def render_app(logger):
         mime="text/csv"
     )
 
+    # ============================================================
+    # METHODOLOGY (transparency on how the score is built)
+    # ============================================================
+    st.markdown("---")
+    _render_score_methodology()
+
     render_footer()
 
 
 def _render_score_methodology():
-    import streamlit as st
-    st.markdown(
-        "<div style='display:flex;align-items:baseline;justify-content:space-between;margin-bottom:0.6rem;'>"
-        "<h3 style=\"color:#1E293B;font-family:'Fira Sans',sans-serif;margin:0;font-weight:600;font-size:1.05rem;\">Metodologia del Score</h3>"
-        "<span style=\"color:#94A3B8;font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:500;font-family:'Fira Sans',sans-serif;\">v2.0 &middot; 4 dimensiones</span>"
-        "</div>",
-        unsafe_allow_html=True
-    )
-    with st.expander("Como se construye la metrica de calidad?", expanded=False):
-        st.markdown(
-            "<p style=\"color:#475569;font-size:0.88rem;line-height:1.65;margin:0 0 1rem 0;font-family:'Fira Sans',sans-serif;\">"
-            "El score global del Power BI Analyzer se calcula como un <strong style='color:#1E293B;'>promedio ponderado de 4 dimensiones de calidad</strong>, "
-            "cada una alimentada por metricas especificas medidas sobre el reporte.</p>",
-            unsafe_allow_html=True
-        )
+    """Render de la sección 'Metodología del Score' — look corporativo claro YPF.
+
+    Explica las 4 dimensiones de calidad con pesos, métricas que las alimentan
+    y umbrales globales. Diseño sutil con paleta corporativa.
+    """
+    st.markdown("""
+    <div style="display:flex; align-items:baseline; justify-content:space-between;
+                margin-bottom:0.6rem;">
+        <h3 style="color:#1E293B; font-family:'Fira Sans',sans-serif; margin:0;
+                   font-weight:600; letter-spacing:-0.01em; font-size:1.05rem;">
+            📐 Metodología del Score
+        </h3>
+        <span style="color:#94A3B8; font-size:0.7rem; letter-spacing:0.08em;
+                     text-transform:uppercase; font-weight:500;
+                     font-family:'Fira Sans',sans-serif;">
+            v2.0 · 4 dimensiones
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    with st.expander("¿Cómo se construye la métrica de calidad?", expanded=False):
+        st.markdown("""
+        <p style="color:#475569; font-size:0.88rem; line-height:1.65;
+                  margin:0 0 1rem 0; font-family:'Fira Sans',sans-serif;">
+            El score global del Power BI Analyzer se calcula como un
+            <strong style="color:#1E293B;">promedio ponderado de 4 dimensiones de calidad</strong>,
+            cada una alimentada por métricas específicas medidas sobre el reporte. Las
+            dimensiones reflejan los pilares de un reporte sostenible y mantenible.
+        </p>
+        """, unsafe_allow_html=True)
+
         dims = [
-            {'label': 'Modelo Semantico', 'weight': '35%', 'desc': 'Cimiento del reporte. Calidad estructural del diseno de datos.',
-             'metrics': ['Cantidad de tablas', 'Relaciones totales', 'Relaciones bidireccionales', 'Columnas calculadas', 'Tamano del modelo']},
-            {'label': 'DAX / Performance', 'weight': '25%', 'desc': 'Calidad de medidas DAX y su impacto en el rendimiento.',
-             'metrics': ['Medidas DAX complejas']},
-            {'label': 'Diseno del Reporte', 'weight': '25%', 'desc': 'Composicion visual: densidad, filtros y assets embebidos.',
-             'metrics': ['Visualizaciones por pagina', 'Filtros por pagina', 'Imagenes embebidas (MB)']},
-            {'label': 'Gobernanza / Mantenibilidad', 'weight': '15%', 'desc': 'Buenas practicas y mantenibilidad a largo plazo.',
-             'metrics': ['Custom visuals', 'Total de paginas']},
+            {
+                'label': 'Modelo Semántico',
+                'weight': '35%',
+                'desc': 'Cimiento del reporte. Mide la calidad estructural del diseño de datos.',
+                'metrics': ['Cantidad de tablas', 'Relaciones totales',
+                            'Relaciones bidireccionales', 'Columnas calculadas',
+                            'Tamaño del modelo'],
+            },
+            {
+                'label': 'DAX / Performance',
+                'weight': '25%',
+                'desc': 'Calidad de las medidas DAX y su impacto en el rendimiento del reporte.',
+                'metrics': ['Medidas DAX complejas'],
+            },
+            {
+                'label': 'Diseño del Reporte',
+                'weight': '25%',
+                'desc': 'Composición visual: densidad por página, filtros y assets embebidos.',
+                'metrics': ['Visualizaciones por página', 'Filtros por página',
+                            'Imágenes embebidas (MB)'],
+            },
+            {
+                'label': 'Gobernanza / Mantenibilidad',
+                'weight': '15%',
+                'desc': 'Buenas prácticas y mantenibilidad a largo plazo.',
+                'metrics': ['Custom visuals', 'Total de páginas'],
+            },
         ]
+
         cols = st.columns(4)
         for col, dim in zip(cols, dims):
-            metrics_html = "".join(
-                "<li style=\"color:#475569;font-size:0.78rem;line-height:1.6;margin-bottom:0.15rem;font-family:'Fira Sans',sans-serif;\">" + m + "</li>"
+            metrics_html = ''.join(
+                f'<li style="color:#475569; font-size:0.78rem; line-height:1.6; '
+                f'margin-bottom:0.15rem; font-family:\'Fira Sans\',sans-serif;">{m}</li>'
                 for m in dim['metrics']
             )
             with col:
-                html = (
-                    "<div style='background:#FFFFFF;border:1px solid #E2E8F0;border-left:4px solid #0451E4;border-radius:0 8px 8px 0;"
-                    "padding:1rem 1.1rem;height:100%;box-shadow:0 2px 8px rgba(0,0,0,0.04);'>"
-                    "<div style=\"display:inline-block;color:#0451E4;font-size:0.7rem;letter-spacing:0.08em;font-weight:700;padding:0.2rem 0.6rem;"
-                    "border-radius:6px;background:rgba(4,81,228,0.08);border:1px solid rgba(4,81,228,0.18);margin-bottom:0.65rem;font-family:'Fira Sans',sans-serif;\">"
-                    + dim['weight'] + "</div>"
-                    "<div style=\"color:#1E293B;font-family:'Fira Sans',sans-serif;font-size:0.9rem;font-weight:600;line-height:1.3;margin-bottom:0.4rem;\">"
-                    + dim['label'] + "</div>"
-                    "<p style=\"color:#64748B;font-size:0.78rem;line-height:1.6;margin:0 0 0.7rem 0;font-family:'Fira Sans',sans-serif;\">"
-                    + dim['desc'] + "</p>"
-                    "<div style=\"color:#94A3B8;font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.35rem;font-weight:600;font-family:'Fira Sans',sans-serif;\">"
-                    "Metricas</div>"
-                    "<ul style='margin:0;padding-left:1rem;'>" + metrics_html + "</ul>"
-                    "</div>"
-                )
-                st.markdown(html, unsafe_allow_html=True)
-        st.markdown(
-            "<div style='margin-top:1.25rem;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:1rem 1.25rem;'>"
-            "<div style=\"color:#64748B;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.65rem;font-weight:600;font-family:'Fira Sans',sans-serif;\">Umbrales de Score Global</div>"
-            "<div style='display:grid;grid-template-columns:repeat(4, 1fr);gap:0.75rem;'>"
-            "<div style='text-align:center;'><div style=\"color:#10B981;font-size:1.15rem;font-weight:700;font-family:'Fira Sans',sans-serif;\">90 - 100</div>"
-            "<div style=\"color:#64748B;font-size:0.75rem;margin-top:0.15rem;font-family:'Fira Sans',sans-serif;\">Excelente</div></div>"
-            "<div style='text-align:center;'><div style=\"color:#0451E4;font-size:1.15rem;font-weight:700;font-family:'Fira Sans',sans-serif;\">75 - 89</div>"
-            "<div style=\"color:#64748B;font-size:0.75rem;margin-top:0.15rem;font-family:'Fira Sans',sans-serif;\">Bueno</div></div>"
-            "<div style='text-align:center;'><div style=\"color:#F59E0B;font-size:1.15rem;font-weight:700;font-family:'Fira Sans',sans-serif;\">60 - 74</div>"
-            "<div style=\"color:#64748B;font-size:0.75rem;margin-top:0.15rem;font-family:'Fira Sans',sans-serif;\">Atencion</div></div>"
-            "<div style='text-align:center;'><div style=\"color:#EF4444;font-size:1.15rem;font-weight:700;font-family:'Fira Sans',sans-serif;\">0 - 59</div>"
-            "<div style=\"color:#64748B;font-size:0.75rem;margin-top:0.15rem;font-family:'Fira Sans',sans-serif;\">Critico</div></div>"
-            "</div></div>",
-            unsafe_allow_html=True
-        )
+                st.markdown(f"""
+                <div style="background:#FFFFFF; border:1px solid #E2E8F0;
+                            border-left:4px solid #0451E4; border-radius:0 8px 8px 0;
+                            padding:1rem 1.1rem; height:100%;
+                            box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+                    <div style="display:inline-block; color:#0451E4; font-size:0.7rem;
+                                letter-spacing:0.08em; font-weight:700;
+                                padding:0.2rem 0.6rem; border-radius:6px;
+                                background:rgba(4,81,228,0.08);
+                                border:1px solid rgba(4,81,228,0.18);
+                                margin-bottom:0.65rem;
+                                font-family:'Fira Sans',sans-serif;">
+                        {dim['weight']}
+                    </div>
+                    <div style="color:#1E293B; font-family:'Fira Sans',sans-serif;
+                                font-size:0.9rem; font-weight:600; letter-spacing:-0.01em;
+                                line-height:1.3; margin-bottom:0.4rem;">
+                        {dim['label']}
+                    </div>
+                    <p style="color:#64748B; font-size:0.78rem; line-height:1.6;
+                              margin:0 0 0.7rem 0; font-family:'Fira Sans',sans-serif;">
+                        {dim['desc']}
+                    </p>
+                    <div style="color:#94A3B8; font-size:0.65rem; letter-spacing:0.1em;
+                                text-transform:uppercase; margin-bottom:0.35rem;
+                                font-weight:600; font-family:'Fira Sans',sans-serif;">
+                        Métricas
+                    </div>
+                    <ul style="margin:0; padding-left:1rem;">{metrics_html}</ul>
+                </div>
+                """, unsafe_allow_html=True)
+
+        # Thresholds block
+        st.markdown("""
+        <div style="margin-top:1.25rem; background:#F8FAFC; border:1px solid #E2E8F0;
+                    border-radius:8px; padding:1rem 1.25rem;">
+            <div style="color:#64748B; font-size:0.7rem; letter-spacing:0.1em;
+                        text-transform:uppercase; margin-bottom:0.65rem;
+                        font-weight:600; font-family:'Fira Sans',sans-serif;">
+                Umbrales de Score Global
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.75rem;">
+                <div style="text-align:center;">
+                    <div style="color:#10B981; font-size:1.15rem; font-weight:700;
+                                font-family:'Fira Sans',sans-serif;">90 – 100</div>
+                    <div style="color:#64748B; font-size:0.75rem; margin-top:0.15rem;
+                                font-family:'Fira Sans',sans-serif;">Excelente</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="color:#0451E4; font-size:1.15rem; font-weight:700;
+                                font-family:'Fira Sans',sans-serif;">75 – 89</div>
+                    <div style="color:#64748B; font-size:0.75rem; margin-top:0.15rem;
+                                font-family:'Fira Sans',sans-serif;">Bueno</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="color:#F59E0B; font-size:1.15rem; font-weight:700;
+                                font-family:'Fira Sans',sans-serif;">60 – 74</div>
+                    <div style="color:#64748B; font-size:0.75rem; margin-top:0.15rem;
+                                font-family:'Fira Sans',sans-serif;">Atención</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="color:#EF4444; font-size:1.15rem; font-weight:700;
+                                font-family:'Fira Sans',sans-serif;">0 – 59</div>
+                    <div style="color:#64748B; font-size:0.75rem; margin-top:0.15rem;
+                                font-family:'Fira Sans',sans-serif;">Crítico</div>
+                </div>
+            </div>
+            <p style="color:#94A3B8; font-size:0.72rem; line-height:1.6;
+                      margin:0.85rem 0 0 0; text-align:center;
+                      font-family:'Fira Sans',sans-serif;">
+                Umbrales alineados con el sistema del Power BI Fixer para mantener
+                consistencia entre las herramientas de la suite.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
