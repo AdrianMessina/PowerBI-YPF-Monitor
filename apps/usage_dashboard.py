@@ -91,12 +91,12 @@ def render_app(logger):
     )
 
     # Require authentication
-    auth = Authenticator()
-    if not auth.require_auth(admin_only=False):
-        render_footer()
-        return
-
-    auth.render_user_info()
+#     auth = Authenticator()
+#     if not auth.require_auth(admin_only=False):
+#         render_footer()
+#         return
+# 
+#     auth.render_user_info()
 
     # Warning about file naming
     st.markdown("""
