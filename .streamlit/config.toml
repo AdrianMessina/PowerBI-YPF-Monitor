@@ -1,0 +1,24 @@
+# ============================================================
+# YPF BI Monitor - Configuracion de Streamlit
+# ============================================================
+
+[server]
+port = 8501
+headless = true
+maxUploadSize = 1024
+enableCORS = false
+enableXsrfProtection = true
+
+[browser]
+serverAddress = "localhost"
+gatherUsageStats = false
+
+[theme]
+primaryColor = "#0451E4"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F8FAFC"
+textColor = "#1E293B"
+font = "sans serif"
+
+[client]
+showSidebarNavigation = false
