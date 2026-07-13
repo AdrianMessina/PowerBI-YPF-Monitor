@@ -33,7 +33,10 @@ def get_shared_css():
        Fonts: Fira Sans 300-700 / Fira Code 400-600
        ============================================================ */
 
-    @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+    /* ============================================================
+       CLOUDERA FIX: Google Fonts CDN removido para evitar timeout
+       Usar system fonts robustos disponibles en Azure/Cloudera
+       ============================================================ */
 
     /* ---- Custom Properties ---- */
     :root {
@@ -94,9 +97,9 @@ def get_shared_css():
         --t-norm: 200ms;
         --t-slow: 320ms;
 
-        /* Fonts */
-        --sans: 'Fira Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        --mono: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+        /* Fonts - System fallbacks primero para Cloudera */
+        --sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --mono: 'Cascadia Code', Consolas, 'Courier New', monospace;
     }
 
     /* ---- Reduced Motion ---- */
@@ -433,19 +436,13 @@ def get_shared_css():
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 32px; height: 32px;
+        width: 40px; height: 40px;
         border-radius: var(--r-sm);
         background: var(--blue-subtle);
         border: 1px solid rgba(4,81,228,0.08);
         margin-bottom: 0.5rem;
-    }
-    .feature-card .card-icon svg {
-        width: 16px; height: 16px;
-        stroke: var(--blue);
-        fill: none;
-        stroke-width: 1.75;
-        stroke-linecap: round;
-        stroke-linejoin: round;
+        font-size: 1.5rem;
+        line-height: 1;
     }
     .feature-card h3 {
         color: var(--ink);
@@ -733,7 +730,7 @@ def get_shared_css():
 
 
 def render_app_header(title: str, subtitle: str = "", version: str = ""):
-    """Render a standardized YPF corporate app header."""
+    """Render a standardized YPF corporate app header without logo."""
     version_html = f'<span class="version">v{version}</span>' if version else ''
     subtitle_html = f'<p class="subtitle">{subtitle}</p>' if subtitle else ''
 
@@ -749,8 +746,8 @@ def render_app_header(title: str, subtitle: str = "", version: str = ""):
 def render_footer():
     """Render a standardized YPF footer."""
     st.markdown("""
-    <div class="ypf-footer">
-        YPF S.A. &middot; Equipo de desarrollo de visualizacion &middot; 2026
+    <div class="ypf-footer" style="text-align: center;">
+        Para YPF - Gerencia Visualización - DAIA
     </div>
     """, unsafe_allow_html=True)
 
