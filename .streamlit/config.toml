@@ -1,19 +1,26 @@
 # ============================================================
 # YPF BI Monitor - Configuracion de Streamlit
 # ============================================================
+# Documentacion: https://docs.streamlit.io/develop/api-reference/configuration/config.toml
+# ============================================================
 
 [server]
+# Puerto por defecto (cambiar si hay conflicto)
 port = 8501
+# Abrir navegador automaticamente al iniciar
 headless = true
+# Tamano maximo de archivo para upload (en MB)
 maxUploadSize = 1024
 enableCORS = false
-enableXsrfProtection = true
+enableXsrfProtection = false
 
 [browser]
+# Titulo en la pestana del navegador
 serverAddress = "localhost"
 gatherUsageStats = false
 
 [theme]
+# Tema YPF corporativo
 primaryColor = "#0451E4"
 backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#F8FAFC"
@@ -21,4 +28,5 @@ textColor = "#1E293B"
 font = "sans serif"
 
 [client]
+# Mostrar barra lateral expandida por defecto
 showSidebarNavigation = false
