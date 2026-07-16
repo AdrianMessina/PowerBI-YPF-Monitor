@@ -11,12 +11,11 @@ port = 8501
 headless = true
 # Tamano maximo de archivo para upload (en MB)
 maxUploadSize = 1024
-enableCORS = false
-enableXsrfProtection = false
+
+
 
 [browser]
 # Titulo en la pestana del navegador
-serverAddress = "localhost"
 gatherUsageStats = false
 
 [theme]
